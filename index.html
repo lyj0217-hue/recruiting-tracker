@@ -210,6 +210,12 @@ button:hover{background:var(--color-background-secondary)}
     <div class="sec">
       <div class="sec-title">필터</div>
       <div class="sheet-filters">
+        <label>구분</label>
+        <select id="sf-type" onchange="updateSheetFilters();renderSheet()">
+          <option value="">전체</option>
+          <option value="eng">Engineer</option>
+          <option value="non">Non-Engineer</option>
+        </select>
         <label>포지션</label>
         <select id="sf-pos" onchange="renderSheet()"><option value="">전체</option></select>
         <label>전형 단계</label>
@@ -309,12 +315,16 @@ function switchTab(t){
 }
 
 function updateSheetFilters(){
-  const positions=[...new Set(candidates.map(c=>c.pos).filter(Boolean))].sort();
+  const filterType=document.getElementById('sf-type').value;
+  const filteredCands=filterType?candidates.filter(c=>c.type===filterType):candidates;
+
+  const positions=[...new Set(filteredCands.map(c=>c.pos).filter(Boolean))].sort();
   const posEl=document.getElementById('sf-pos');
   const curPos=posEl.value;
   posEl.innerHTML='<option value="">전체</option>'+positions.map(p=>`<option value="${p}"${p===curPos?' selected':''}>${p}</option>`).join('');
+
   const stepIds=new Set();
-  candidates.forEach(c=>c.steps.forEach(s=>stepIds.add(s.id)));
+  filteredCands.forEach(c=>c.steps.forEach(s=>stepIds.add(s.id)));
   const stepEl=document.getElementById('sf-step');
   const curStep=stepEl.value;
   const usedSteps=ALL_STEPS.filter(s=>stepIds.has(s.id));
@@ -322,11 +332,13 @@ function updateSheetFilters(){
 }
 
 function renderSheet(){
+  const filterType=document.getElementById('sf-type').value;
   const filterPos=document.getElementById('sf-pos').value;
   const filterStep=document.getElementById('sf-step').value;
   const filterOutcome=document.getElementById('sf-outcome').value;
   const filterMode=document.getElementById('sf-mode').value;
   let list=candidates.filter(c=>{
+    if(filterType&&c.type!==filterType)return false;
     if(filterPos&&c.pos!==filterPos)return false;
     if(filterOutcome&&c.outcome!==filterOutcome)return false;
     if(filterStep){const s=c.steps.find(st=>st.id===filterStep);if(!s)return false;if(filterMode&&s.mode!==filterMode)return false;}
