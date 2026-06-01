@@ -112,6 +112,21 @@ button:hover{background:var(--color-background-secondary)}
 .star-text{color:var(--color-text-secondary);line-height:1.6}
 .ic-actions{display:flex;gap:6px;justify-content:flex-end;border-top:0.5px solid var(--color-border-tertiary);padding-top:8px}
 .ic-actions button{height:28px;padding:0 10px;font-size:12px}
+.sheet-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.sheet-filters select{height:32px;font-size:12px;width:auto;min-width:140px;flex:none}
+.sheet-filters label{font-size:12px;color:var(--color-text-secondary);white-space:nowrap}
+.sheet-table-wrap{overflow-x:auto}
+.sheet-table{width:100%;border-collapse:collapse;font-size:13px}
+.sheet-table th{background:var(--color-background-secondary);padding:8px 12px;text-align:left;font-size:11px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap;border-bottom:0.5px solid var(--color-border-tertiary)}
+.sheet-table td{padding:8px 12px;border-bottom:0.5px solid var(--color-border-tertiary);vertical-align:middle;color:var(--color-text-primary)}
+.sheet-table tr:last-child td{border-bottom:none}
+.sheet-table tr:hover td{background:var(--color-background-secondary)}
+.sheet-table .td-name{font-weight:500;white-space:nowrap}
+.sheet-table .td-pos{color:var(--color-text-secondary);font-size:12px;white-space:nowrap}
+.cell-done{display:inline-flex;align-items:center;gap:4px}
+.cell-dash{color:var(--color-text-tertiary);font-size:12px}
+.sheet-summary{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.sheet-stat{font-size:12px;color:var(--color-text-secondary);background:var(--color-background-secondary);padding:3px 10px;border-radius:999px}
 @media(max-width:900px){
   body{padding:1rem}
   .metric-grid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
@@ -125,12 +140,13 @@ button:hover{background:var(--color-background-secondary)}
   <div class="tabs">
     <button class="tab active" onclick="switchTab('metrics')">성과 수치</button>
     <button class="tab" onclick="switchTab('candidates')">후보자</button>
+    <button class="tab" onclick="switchTab('sheet')">조회</button>
     <button class="tab" onclick="switchTab('issues')">이슈 메모</button>
   </div>
 
   <div id="pane-metrics" class="pane active">
     <div class="topbar">
-      <div style="font-size:15px;font-weight:500;color:var(--color-text-primary)">월별 성과</div>
+      <div style="font-size:15px;font-weight:500">월별 성과</div>
       <div class="month-nav">
         <button onclick="changeMonth(-1)">‹</button>
         <span id="month-label"></span>
@@ -190,6 +206,41 @@ button:hover{background:var(--color-background-secondary)}
     <div class="cand-grid" id="cand-list"></div>
   </div>
 
+  <div id="pane-sheet" class="pane">
+    <div class="sec">
+      <div class="sec-title">필터</div>
+      <div class="sheet-filters">
+        <label>포지션</label>
+        <select id="sf-pos" onchange="renderSheet()"><option value="">전체</option></select>
+        <label>전형 단계</label>
+        <select id="sf-step" onchange="renderSheet()"><option value="">전체</option></select>
+        <label>최종 결과</label>
+        <select id="sf-outcome" onchange="renderSheet()">
+          <option value="">전체</option>
+          <option value="in-progress">진행중</option>
+          <option value="hired">채용됨</option>
+          <option value="rejected">불합격</option>
+          <option value="withdrawn">중도 이탈</option>
+        </select>
+        <label>인터뷰 방식</label>
+        <select id="sf-mode" onchange="renderSheet()">
+          <option value="">전체</option>
+          <option value="online">화상</option>
+          <option value="offline">대면</option>
+        </select>
+      </div>
+    </div>
+    <div class="sec" style="padding:0;overflow:hidden">
+      <div class="sheet-table-wrap">
+        <table class="sheet-table">
+          <thead id="sheet-head"></thead>
+          <tbody id="sheet-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="sheet-summary" id="sheet-summary"></div>
+  </div>
+
   <div id="pane-issues" class="pane">
     <div class="sec">
       <div class="sec-title">이슈 추가</div>
@@ -224,9 +275,10 @@ button:hover{background:var(--color-background-secondary)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
-const ENG_STEPS=[{id:'ps',label:'Problem Solving'},{id:'sd',label:'System Design'},{id:'dk',label:'Domain Knowledge'},{id:'sd_dk',label:'System Design & Domain Knowledge'},{id:'culture1',label:'조직문화 R1'},{id:'culture2',label:'조직문화 R2'}];
-const NON_STEPS=[{id:'job',label:'직무 인터뷰'},{id:'culture',label:'조직문화'}];
+const ENG_STEPS=[{id:'ps',label:'Problem Solving'},{id:'sd',label:'System Design'},{id:'dk',label:'Domain Knowledge'},{id:'sd_dk',label:'System Design & Domain Knowledge'},{id:'culture1',label:'조직문화 R1'},{id:'culture2',label:'조직문화 R2'},{id:'teatime_eng',label:'티타임'},{id:'perm_eng',label:'정규직 전환'}];
+const NON_STEPS=[{id:'job',label:'직무 인터뷰'},{id:'culture',label:'조직문화'},{id:'teatime_non',label:'티타임'},{id:'perm_non',label:'정규직 전환'}];
 const ALL_STEPS=[...ENG_STEPS,...NON_STEPS.filter(s=>!ENG_STEPS.find(e=>e.id===s.id))];
+const ALL_STEP_IDS=ALL_STEPS.map(s=>s.id);
 const OUTCOME_LABEL={hired:'채용됨',rejected:'불합격',withdrawn:'중도 이탈','in-progress':'진행중'};
 const OUTCOME_BADGE={hired:'b-hired',rejected:'b-rejected',withdrawn:'b-withdrawn','in-progress':'b-inprogress'};
 const TAG_LABEL={candidate:'후보자 이슈',process:'프로세스 이슈',internal:'내부 이슈',other:'기타'};
@@ -248,76 +300,89 @@ function saveEntries(){try{localStorage.setItem('rec_entries_v7',JSON.stringify(
 function saveIssues(){try{localStorage.setItem('rec_issues_v1',JSON.stringify(issues));}catch(e){}}
 
 function switchTab(t){
-  ['metrics','candidates','issues'].forEach((id,i)=>{
+  ['metrics','candidates','sheet','issues'].forEach((id,i)=>{
     document.getElementById('pane-'+id).classList.toggle('active',id===t);
     document.querySelectorAll('.tab')[i].classList.toggle('active',id===t);
   });
   if(t==='metrics')renderMetrics();
+  if(t==='sheet'){updateSheetFilters();renderSheet();}
+}
+
+function updateSheetFilters(){
+  const positions=[...new Set(candidates.map(c=>c.pos).filter(Boolean))].sort();
+  const posEl=document.getElementById('sf-pos');
+  const curPos=posEl.value;
+  posEl.innerHTML='<option value="">전체</option>'+positions.map(p=>`<option value="${p}"${p===curPos?' selected':''}>${p}</option>`).join('');
+  const stepIds=new Set();
+  candidates.forEach(c=>c.steps.forEach(s=>stepIds.add(s.id)));
+  const stepEl=document.getElementById('sf-step');
+  const curStep=stepEl.value;
+  const usedSteps=ALL_STEPS.filter(s=>stepIds.has(s.id));
+  stepEl.innerHTML='<option value="">전체</option>'+usedSteps.map(s=>`<option value="${s.id}"${s.id===curStep?' selected':''}>${s.label}</option>`).join('');
+}
+
+function renderSheet(){
+  const filterPos=document.getElementById('sf-pos').value;
+  const filterStep=document.getElementById('sf-step').value;
+  const filterOutcome=document.getElementById('sf-outcome').value;
+  const filterMode=document.getElementById('sf-mode').value;
+  let list=candidates.filter(c=>{
+    if(filterPos&&c.pos!==filterPos)return false;
+    if(filterOutcome&&c.outcome!==filterOutcome)return false;
+    if(filterStep){const s=c.steps.find(st=>st.id===filterStep);if(!s)return false;if(filterMode&&s.mode!==filterMode)return false;}
+    else if(filterMode){if(!c.steps.some(s=>s.done&&s.mode===filterMode))return false;}
+    return true;
+  });
+  const colStepIds=[];
+  if(filterStep){colStepIds.push(filterStep);}
+  else{const seen=new Set();list.forEach(c=>c.steps.forEach(s=>{if(!seen.has(s.id)){seen.add(s.id);colStepIds.push(s.id);}}));colStepIds.sort((a,b)=>ALL_STEP_IDS.indexOf(a)-ALL_STEP_IDS.indexOf(b));}
+  const colSteps=colStepIds.map(id=>ALL_STEPS.find(s=>s.id===id)).filter(Boolean);
+  document.getElementById('sheet-head').innerHTML=`<tr><th>이름</th><th>포지션</th><th>구분</th>${colSteps.map(s=>`<th>${s.label}</th>`).join('')}<th>최종 결과</th></tr>`;
+  const body=document.getElementById('sheet-body');
+  if(!list.length){body.innerHTML=`<tr><td colspan="${4+colSteps.length}" style="text-align:center;padding:2rem;color:var(--color-text-tertiary);font-size:13px">조건에 맞는 후보자가 없어요</td></tr>`;document.getElementById('sheet-summary').innerHTML='';return;}
+  list=[...list].sort((a,b)=>a.pos.localeCompare(b.pos)||a.name.localeCompare(b.name));
+  body.innerHTML=list.map(c=>{
+    const cells=colSteps.map(cs=>{
+      const s=c.steps.find(st=>st.id===cs.id);
+      if(!s)return`<td><span class="cell-dash">—</span></td>`;
+      if(!s.done)return`<td><span class="cell-dash" style="font-size:12px">대기</span></td>`;
+      const modeBadge=s.mode?`<span class="mode-badge ${s.mode==='online'?'mode-online':'mode-offline'}">${s.mode==='online'?'화상':'대면'}</span>`:'';
+      const dateStr=s.doneDate?`<span style="font-size:11px;color:var(--color-text-tertiary)">${fmtDate(s.doneDate)}</span>`:'';
+      return`<td><span class="cell-done">✓ ${modeBadge} ${dateStr}</span></td>`;
+    }).join('');
+    return`<tr><td class="td-name">${c.name}</td><td class="td-pos">${c.pos||'—'}</td><td><span class="badge ${c.type==='eng'?'b-eng':'b-non'}">${c.type==='eng'?'Engineer':'Non-Eng'}</span></td>${cells}<td><span class="badge ${OUTCOME_BADGE[c.outcome]}">${OUTCOME_LABEL[c.outcome]}</span></td></tr>`;
+  }).join('');
+  const total=list.length,hired=list.filter(c=>c.outcome==='hired').length,inprog=list.filter(c=>c.outcome==='in-progress').length,rejected=list.filter(c=>c.outcome==='rejected').length;
+  document.getElementById('sheet-summary').innerHTML=`<span class="sheet-stat">총 ${total}명</span><span class="sheet-stat">진행중 ${inprog}명</span><span class="sheet-stat">채용됨 ${hired}명</span><span class="sheet-stat">불합격 ${rejected}명</span><span class="sheet-stat">전환율 ${total>0?Math.round(hired/total*100):0}%</span>`;
 }
 
 function renderStepSelector(){
   const type=document.getElementById('c-type').value;
   const steps=type==='eng'?ENG_STEPS:NON_STEPS;
   selectedSteps=new Set(steps.map(s=>s.id));
-  document.getElementById('step-selector').innerHTML=`
-    <div style="margin-bottom:4px;font-size:12px;color:var(--color-text-secondary)">인터뷰 단계 선택 (해당 없는 단계는 해제)</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">${steps.map(s=>`<button class="step-toggle on" id="stog-${s.id}" onclick="toggleStep('${s.id}')">${s.label}</button>`).join('')}</div>`;
+  document.getElementById('step-selector').innerHTML=`<div style="margin-bottom:4px;font-size:12px;color:var(--color-text-secondary)">인터뷰 단계 선택 (해당 없는 단계는 해제)</div><div style="display:flex;gap:6px;flex-wrap:wrap">${steps.map(s=>`<button class="step-toggle on" id="stog-${s.id}" onclick="toggleStep('${s.id}')">${s.label}</button>`).join('')}</div>`;
 }
-
-function toggleStep(id){
-  selectedSteps.has(id)?selectedSteps.delete(id):selectedSteps.add(id);
-  document.getElementById('stog-'+id).classList.toggle('on',selectedSteps.has(id));
-}
+function toggleStep(id){selectedSteps.has(id)?selectedSteps.delete(id):selectedSteps.add(id);document.getElementById('stog-'+id).classList.toggle('on',selectedSteps.has(id));}
 
 function addCandidate(){
-  const name=document.getElementById('c-name').value.trim();
-  const pos=document.getElementById('c-pos').value.trim();
-  const dateVal=document.getElementById('c-date').value;
-  const type=document.getElementById('c-type').value;
+  const name=document.getElementById('c-name').value.trim(),pos=document.getElementById('c-pos').value.trim(),dateVal=document.getElementById('c-date').value,type=document.getElementById('c-type').value;
   if(!name){document.getElementById('c-name').focus();return;}
   const steps=(type==='eng'?ENG_STEPS:NON_STEPS).filter(s=>selectedSteps.has(s.id)).map(s=>({id:s.id,label:s.label,done:false,doneDate:null,mode:null}));
   candidates.push({id:Date.now(),name,pos:pos||'',type,date:dateVal?new Date(dateVal).toISOString():new Date().toISOString(),steps,outcome:'in-progress',onboardDone:false});
-  saveCands();
-  document.getElementById('c-name').value='';document.getElementById('c-pos').value='';
-  renderCandidates();renderMetrics();
+  saveCands();document.getElementById('c-name').value='';document.getElementById('c-pos').value='';renderCandidates();renderMetrics();
 }
 
 function toggleStepDone(candId,stepId){
   const c=candidates.find(c=>c.id===candId);if(!c)return;
   const s=c.steps.find(s=>s.id===stepId);if(!s)return;
-  if(!s.done){
-    const dateEl=document.getElementById(`sd-${candId}-${stepId}`);
-    const modeEl=document.getElementById(`sm-${candId}-${stepId}`);
-    s.done=true;
-    s.doneDate=dateEl&&dateEl.value?new Date(dateEl.value).toISOString():new Date().toISOString();
-    s.mode=modeEl?modeEl.value:null;
-  }else{s.done=false;s.doneDate=null;s.mode=null;}
+  if(!s.done){const dateEl=document.getElementById(`sd-${candId}-${stepId}`),modeEl=document.getElementById(`sm-${candId}-${stepId}`);s.done=true;s.doneDate=dateEl&&dateEl.value?new Date(dateEl.value).toISOString():new Date().toISOString();s.mode=modeEl?modeEl.value:null;}
+  else{s.done=false;s.doneDate=null;s.mode=null;}
   saveCands();renderCandidates();renderMetrics();
 }
-
-function addStep(candId){
-  const c=candidates.find(c=>c.id===candId);if(!c)return;
-  const selEl=document.getElementById(`sa-${candId}`);if(!selEl)return;
-  const stepDef=ALL_STEPS.find(s=>s.id===selEl.value);if(!stepDef||c.steps.find(s=>s.id===stepDef.id))return;
-  c.steps.push({id:stepDef.id,label:stepDef.label,done:false,doneDate:null,mode:null});
-  saveCands();renderCandidates();renderMetrics();
-}
-
-function removeStep(candId,stepId){
-  const c=candidates.find(c=>c.id===candId);if(!c)return;
-  c.steps=c.steps.filter(s=>s.id!==stepId);saveCands();renderCandidates();renderMetrics();
-}
-
-function updateOutcome(candId,outcome){
-  const c=candidates.find(c=>c.id===candId);
-  if(c){c.outcome=outcome;if(outcome!=='hired')c.onboardDone=false;saveCands();renderCandidates();renderMetrics();}
-}
-
-function toggleOnboard(candId){
-  const c=candidates.find(c=>c.id===candId);
-  if(c){c.onboardDone=!c.onboardDone;saveCands();renderCandidates();}
-}
-
+function addStep(candId){const c=candidates.find(c=>c.id===candId);if(!c)return;const selEl=document.getElementById(`sa-${candId}`);if(!selEl)return;const stepDef=ALL_STEPS.find(s=>s.id===selEl.value);if(!stepDef||c.steps.find(s=>s.id===stepDef.id))return;c.steps.push({id:stepDef.id,label:stepDef.label,done:false,doneDate:null,mode:null});saveCands();renderCandidates();renderMetrics();}
+function removeStep(candId,stepId){const c=candidates.find(c=>c.id===candId);if(!c)return;c.steps=c.steps.filter(s=>s.id!==stepId);saveCands();renderCandidates();renderMetrics();}
+function updateOutcome(candId,outcome){const c=candidates.find(c=>c.id===candId);if(c){c.outcome=outcome;if(outcome!=='hired')c.onboardDone=false;saveCands();renderCandidates();renderMetrics();}}
+function toggleOnboard(candId){const c=candidates.find(c=>c.id===candId);if(c){c.onboardDone=!c.onboardDone;saveCands();renderCandidates();}}
 function delCandidate(id){candidates=candidates.filter(c=>c.id!==id);saveCands();renderCandidates();renderMetrics();}
 function setCandFilter(f,btn){candFilter=f;document.querySelectorAll('#pane-candidates .filter-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderCandidates();}
 function fmtDate(iso){if(!iso)return'';const d=new Date(iso);return(d.getMonth()+1)+'.'+d.getDate();}
@@ -332,71 +397,24 @@ function renderCandidates(){
   const el=document.getElementById('cand-list');
   if(!list.length){el.innerHTML='<div class="empty" style="grid-column:1/-1">등록된 후보자가 없어요</div>';return;}
   el.innerHTML=list.map(c=>{
-    const existIds=new Set(c.steps.map(s=>s.id));
-    const addableSteps=ALL_STEPS.filter(s=>!existIds.has(s.id));
+    const existIds=new Set(c.steps.map(s=>s.id)),addableSteps=ALL_STEPS.filter(s=>!existIds.has(s.id));
     const stepsHtml=c.steps.map(s=>{
       const modeBadge=s.done&&s.mode?`<span class="mode-badge ${s.mode==='online'?'mode-online':'mode-offline'}">${s.mode==='online'?'화상':'대면'}</span>`:'';
-      return `<div class="step-row ${s.done?'done-row':''}">
-        <div class="step-check" onclick="toggleStepDone(${c.id},'${s.id}')">${s.done?'✓':''}</div>
-        <span class="step-label">${s.label}</span>
-        ${s.done
-          ?`${modeBadge}<span class="step-date">${fmtDate(s.doneDate)}</span>`
-          :`<select class="step-mode-select" id="sm-${c.id}-${s.id}"><option value="online">화상</option><option value="offline">대면</option></select><input type="date" class="step-date-input" id="sd-${c.id}-${s.id}" value="${now.toISOString().slice(0,10)}" />`
-        }
-        ${!s.done?`<button style="height:24px;padding:0 7px;font-size:11px" onclick="removeStep(${c.id},'${s.id}')">✕</button>`:''}
-      </div>`;
+      return`<div class="step-row ${s.done?'done-row':''}"><div class="step-check" onclick="toggleStepDone(${c.id},'${s.id}')">${s.done?'✓':''}</div><span class="step-label">${s.label}</span>${s.done?`${modeBadge}<span class="step-date">${fmtDate(s.doneDate)}</span>`:`<select class="step-mode-select" id="sm-${c.id}-${s.id}"><option value="online">화상</option><option value="offline">대면</option></select><input type="date" class="step-date-input" id="sd-${c.id}-${s.id}" value="${now.toISOString().slice(0,10)}" />`}${!s.done?`<button style="height:24px;padding:0 7px;font-size:11px" onclick="removeStep(${c.id},'${s.id}')">✕</button>`:''}</div>`;
     }).join('');
     const addStepHtml=addableSteps.length?`<div class="add-step-row"><select id="sa-${c.id}">${addableSteps.map(s=>`<option value="${s.id}">${s.label}</option>`).join('')}</select><button onclick="addStep(${c.id})">+ 단계 추가</button></div>`:'';
     const onboardHtml=c.outcome==='hired'?`<div class="onboard-row ${c.onboardDone?'done':''}" onclick="toggleOnboard(${c.id})"><div class="onboard-check">${c.onboardDone?'✓':''}</div><span class="onboard-label">입사 안내 완료</span><span style="font-size:11px;margin-left:auto;color:${c.onboardDone?'#085041':'var(--color-text-tertiary)'}">${c.onboardDone?'완료':'미완료'}</span></div>`:'';
-    return `<div class="cand-card">
-      <div class="cand-top">
-        <span class="badge ${c.type==='eng'?'b-eng':'b-non'}">${c.type==='eng'?'Engineer':'Non-Eng'}</span>
-        <span class="cand-name">${c.name}</span><span class="cand-pos">${c.pos}</span>
-        <span class="badge ${OUTCOME_BADGE[c.outcome]}">${OUTCOME_LABEL[c.outcome]}</span>
-        <span class="cand-date">${new Date(c.date).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})}</span>
-      </div>
-      <div class="steps-area">${stepsHtml}${addStepHtml}</div>
-      ${onboardHtml}
-      <div class="cand-actions">
-        <span style="font-size:12px;color:var(--color-text-tertiary)">최종 결과</span>
-        <select onchange="updateOutcome(${c.id},this.value)" style="height:28px;font-size:12px;width:auto">
-          <option value="in-progress" ${c.outcome==='in-progress'?'selected':''}>진행중</option>
-          <option value="hired" ${c.outcome==='hired'?'selected':''}>채용됨</option>
-          <option value="rejected" ${c.outcome==='rejected'?'selected':''}>불합격</option>
-          <option value="withdrawn" ${c.outcome==='withdrawn'?'selected':''}>중도 이탈</option>
-        </select>
-        <button onclick="delCandidate(${c.id})" style="margin-left:auto">삭제</button>
-      </div>
-    </div>`;
+    return`<div class="cand-card"><div class="cand-top"><span class="badge ${c.type==='eng'?'b-eng':'b-non'}">${c.type==='eng'?'Engineer':'Non-Eng'}</span><span class="cand-name">${c.name}</span><span class="cand-pos">${c.pos}</span><span class="badge ${OUTCOME_BADGE[c.outcome]}">${OUTCOME_LABEL[c.outcome]}</span><span class="cand-date">${new Date(c.date).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})}</span></div><div class="steps-area">${stepsHtml}${addStepHtml}</div>${onboardHtml}<div class="cand-actions"><span style="font-size:12px;color:var(--color-text-tertiary)">최종 결과</span><select onchange="updateOutcome(${c.id},this.value)" style="height:28px;font-size:12px;width:auto"><option value="in-progress" ${c.outcome==='in-progress'?'selected':''}>진행중</option><option value="hired" ${c.outcome==='hired'?'selected':''}>채용됨</option><option value="rejected" ${c.outcome==='rejected'?'selected':''}>불합격</option><option value="withdrawn" ${c.outcome==='withdrawn'?'selected':''}>중도 이탈</option></select><button onclick="delCandidate(${c.id})" style="margin-left:auto">삭제</button></div></div>`;
   }).join('');
 }
 
-function addEntry(){
-  const name=document.getElementById('e-name').value.trim();
-  if(!name){document.getElementById('e-name').focus();return;}
-  const dateVal=document.getElementById('e-date').value;
-  entries.push({id:Date.now(),name,pos:document.getElementById('e-pos').value.trim(),type:document.getElementById('e-type').value,date:dateVal?new Date(dateVal).toISOString():new Date().toISOString()});
-  saveEntries();document.getElementById('e-name').value='';document.getElementById('e-pos').value='';renderMetrics();
-}
-
+function addEntry(){const name=document.getElementById('e-name').value.trim();if(!name){document.getElementById('e-name').focus();return;}const dateVal=document.getElementById('e-date').value;entries.push({id:Date.now(),name,pos:document.getElementById('e-pos').value.trim(),type:document.getElementById('e-type').value,date:dateVal?new Date(dateVal).toISOString():new Date().toISOString()});saveEntries();document.getElementById('e-name').value='';document.getElementById('e-pos').value='';renderMetrics();}
 function cntType(arr,t){return arr.filter(e=>e.type===t).length;}
 function fmtMonth(y,m){return y+'년 '+MONTHS[m];}
 function changeMonth(d){curMonth+=d;if(curMonth>11){curMonth=0;curYear++;}if(curMonth<0){curMonth=11;curYear--;}renderMetrics();}
-
-function getStepsByMonth(y,m){
-  let count=0;
-  candidates.forEach(c=>c.steps.forEach(s=>{if(s.done&&s.doneDate){const d=new Date(s.doneDate);if(d.getFullYear()===y&&d.getMonth()===m)count++;}}));
-  return count;
-}
-
-function getUniqueCandCount(){
-  const seen=new Set();
-  candidates.forEach(c=>seen.add(c.name.trim().toLowerCase()+'||'+c.pos.trim().toLowerCase()));
-  return seen.size;
-}
-
+function getStepsByMonth(y,m){let c=0;candidates.forEach(c2=>c2.steps.forEach(s=>{if(s.done&&s.doneDate){const d=new Date(s.doneDate);if(d.getFullYear()===y&&d.getMonth()===m)c++;}}));return c;}
+function getUniqueCandCount(){const s=new Set();candidates.forEach(c=>s.add(c.name.trim().toLowerCase()+'||'+c.pos.trim().toLowerCase()));return s.size;}
 function getMonthEntries(y,m){return entries.filter(e=>{const d=new Date(e.date);return d.getFullYear()===y&&d.getMonth()===m;});}
-
 function getMonthRange(){
   const all=[...candidates.map(c=>new Date(c.date)),...entries.map(e=>new Date(e.date)),...candidates.flatMap(c=>c.steps.filter(s=>s.doneDate).map(s=>new Date(s.doneDate)))];
   if(!all.length)return[];
@@ -410,39 +428,23 @@ function getMonthRange(){
 
 function renderMetrics(){
   document.getElementById('month-label').textContent=fmtMonth(curYear,curMonth);
-  const mEntries=getMonthEntries(curYear,curMonth);
-  const mSteps=getStepsByMonth(curYear,curMonth);
-  const uniqueCands=getUniqueCandCount();
-  const allHired=candidates.filter(c=>c.outcome==='hired').length;
-  const allJd=cntType(entries,'jd');
+  const mEntries=getMonthEntries(curYear,curMonth),mSteps=getStepsByMonth(curYear,curMonth),uniqueCands=getUniqueCandCount();
+  const allHired=candidates.filter(c=>c.outcome==='hired').length,allJd=cntType(entries,'jd');
   const allSteps=candidates.reduce((s,c)=>s+c.steps.filter(st=>st.done).length,0);
   const allOnboard=candidates.filter(c=>c.outcome==='hired'&&c.onboardDone).length;
-  const convRate=uniqueCands>0?Math.round(allHired/uniqueCands*100):0;
-  const fillRate=allJd>0?Math.round(allHired/allJd*100):0;
-  const mHired=candidates.filter(c=>{
-    if(c.outcome!=='hired')return false;
-    const doneDates=c.steps.filter(s=>s.done&&s.doneDate).map(s=>new Date(s.doneDate));
-    if(!doneDates.length)return false;
-    const last=new Date(Math.max(...doneDates));
-    return last.getFullYear()===curYear&&last.getMonth()===curMonth;
-  }).length;
-
+  const convRate=uniqueCands>0?Math.round(allHired/uniqueCands*100):0,fillRate=allJd>0?Math.round(allHired/allJd*100):0;
+  const mHired=candidates.filter(c=>{if(c.outcome!=='hired')return false;const dd=c.steps.filter(s=>s.done&&s.doneDate).map(s=>new Date(s.doneDate));if(!dd.length)return false;const last=new Date(Math.max(...dd));return last.getFullYear()===curYear&&last.getMonth()===curMonth;}).length;
   document.getElementById('metrics').innerHTML=`
     <div class="mc blue"><div class="lb">공고 오픈</div><div class="vl">${cntType(mEntries,'jd')}</div><div class="sb">누적 ${allJd}건</div></div>
     <div class="mc"><div class="lb">사내 추천</div><div class="vl">${cntType(mEntries,'referral')}</div><div class="sb">누적 ${cntType(entries,'referral')}건</div></div>
     <div class="mc purple"><div class="lb">인터뷰 어레인지</div><div class="vl">${mSteps}건</div><div class="sb">이달 진행 단계 수</div></div>
     <div class="mc orange"><div class="lb">누적 후보자</div><div class="vl">${uniqueCands}명</div><div class="sb">중복 제거 기준</div></div>
-    <div class="mc green"><div class="lb">채용 전환</div><div class="vl">${mHired}명</div><div class="sb">전환율 ${convRate}%</div></div>
-  `;
+    <div class="mc green"><div class="lb">채용 전환</div><div class="vl">${mHired}명</div><div class="sb">전환율 ${convRate}%</div></div>`;
   renderTrend();
-
-  const mKeys={};
-  entries.forEach(e=>{const d=new Date(e.date),k=d.getFullYear()+'-'+d.getMonth();if(!mKeys[k])mKeys[k]={jd:0};if(e.type==='jd')mKeys[k].jd++;});
-  const ks=Object.keys(mKeys);
-  const avgJd=ks.length?Math.round(ks.reduce((s,k)=>s+mKeys[k].jd,0)/ks.length):0;
+  const mKeys={};entries.forEach(e=>{const d=new Date(e.date),k=d.getFullYear()+'-'+d.getMonth();if(!mKeys[k])mKeys[k]={jd:0};if(e.type==='jd')mKeys[k].jd++;});
+  const ks=Object.keys(mKeys),avgJd=ks.length?Math.round(ks.reduce((s,k)=>s+mKeys[k].jd,0)/ks.length):0;
   const allOnlineSteps=candidates.reduce((s,c)=>s+c.steps.filter(st=>st.done&&st.mode==='online').length,0);
   const allOfflineSteps=candidates.reduce((s,c)=>s+c.steps.filter(st=>st.done&&st.mode==='offline').length,0);
-
   let sum='';
   if(allJd>0)sum+=`• 월 평균 ${avgJd}개 포지션 공고 오픈 및 파이프라인 운영\n`;
   if(uniqueCands>0)sum+=`• 총 ${uniqueCands}명 후보자 인터뷰 프로세스 관리\n`;
@@ -462,38 +464,22 @@ function renderTrend(){
   if(range.length<2){canvas.style.display='none';document.getElementById('legend').innerHTML='<span style="font-size:12px;color:var(--color-text-tertiary)">2개월 이상 데이터가 쌓이면 추이가 보여요</span>';return;}
   canvas.style.display='block';canvas.width=canvas.parentElement.offsetWidth||900;
   const labels=range.map(({y,m})=>m===0?y+'년 1월':MONTHS[m]);
-  const series=[
-    {label:'공고 오픈',color:'#7F77DD',fn:({y,m})=>cntType(getMonthEntries(y,m),'jd')},
-    {label:'인터뷰 어레인지(건)',color:'#1D9E75',fn:({y,m})=>getStepsByMonth(y,m)},
-  ];
+  const series=[{label:'공고 오픈',color:'#7F77DD',fn:({y,m})=>cntType(getMonthEntries(y,m),'jd')},{label:'인터뷰 어레인지(건)',color:'#1D9E75',fn:({y,m})=>getStepsByMonth(y,m)}];
   chartInst=new Chart(canvas,{type:'line',data:{labels,datasets:series.map(s=>({label:s.label,data:range.map(s.fn),borderColor:s.color,backgroundColor:s.color+'22',borderWidth:1.5,pointRadius:3,pointBackgroundColor:s.color,tension:0.3,fill:false}))},options:{responsive:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11},stepSize:1,precision:0},beginAtZero:true}}}});
   document.getElementById('legend').innerHTML=series.map(s=>`<div class="legend-item"><div class="legend-dot" style="background:${s.color}"></div>${s.label}</div>`).join('');
 }
 
-function copySummary(){
-  navigator.clipboard.writeText(document.getElementById('sum-box').textContent).then(()=>{
-    const b=document.querySelector('#pane-metrics button[onclick="copySummary()"]');
-    if(b){b.textContent='복사됐어요 ✓';setTimeout(()=>{b.textContent='클립보드에 복사';},1800);}
-  });
-}
+function copySummary(){navigator.clipboard.writeText(document.getElementById('sum-box').textContent).then(()=>{const b=document.querySelector('#pane-metrics button[onclick="copySummary()"]');if(b){b.textContent='복사됐어요 ✓';setTimeout(()=>{b.textContent='클립보드에 복사';},1800);}});}
 
 function addIssue(){
-  const title=document.getElementById('iss-title').value.trim();
-  if(!title){document.getElementById('iss-title').focus();return;}
+  const title=document.getElementById('iss-title').value.trim();if(!title){document.getElementById('iss-title').focus();return;}
   const dateVal=document.getElementById('iss-date').value;
   issues.push({id:Date.now(),title,tag:document.getElementById('iss-tag').value,date:dateVal?new Date(dateVal).toISOString():new Date().toISOString(),s:document.getElementById('iss-s').value.trim(),t:document.getElementById('iss-t').value.trim(),a:document.getElementById('iss-a').value.trim(),r:document.getElementById('iss-r').value.trim()});
   saveIssues();['iss-title','iss-s','iss-t','iss-a','iss-r'].forEach(id=>{document.getElementById(id).value='';});renderIssues();
 }
-
 function delIssue(id){issues=issues.filter(i=>i.id!==id);saveIssues();renderIssues();}
-function copyIssue(id){
-  const iss=issues.find(i=>i.id===id);if(!iss)return;
-  let txt=iss.title;
-  if(iss.s)txt+='\n[상황] '+iss.s;if(iss.t)txt+='\n[문제] '+iss.t;if(iss.a)txt+='\n[행동] '+iss.a;if(iss.r)txt+='\n[결과] '+iss.r;
-  navigator.clipboard.writeText(txt);
-}
+function copyIssue(id){const iss=issues.find(i=>i.id===id);if(!iss)return;let txt=iss.title;if(iss.s)txt+='\n[상황] '+iss.s;if(iss.t)txt+='\n[문제] '+iss.t;if(iss.a)txt+='\n[행동] '+iss.a;if(iss.r)txt+='\n[결과] '+iss.r;navigator.clipboard.writeText(txt);}
 function setIssueFilter(f,btn){issueFilter=f;document.querySelectorAll('#pane-issues .filter-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderIssues();}
-
 function renderIssues(){
   const filtered=issueFilter==='all'?issues:issues.filter(i=>i.tag===issueFilter);
   const el=document.getElementById('issue-list');
@@ -501,7 +487,7 @@ function renderIssues(){
   el.innerHTML=[...filtered].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(iss=>{
     const stars=[iss.s?`<div class="star-label">상황</div><div class="star-text">${iss.s}</div>`:'',iss.t?`<div class="star-label">문제</div><div class="star-text">${iss.t}</div>`:'',iss.a?`<div class="star-label">행동</div><div class="star-text">${iss.a}</div>`:'',iss.r?`<div class="star-label">결과</div><div class="star-text">${iss.r}</div>`:''
     ].filter(Boolean).join('');
-    return `<div class="issue-card"><div class="ic-top"><span class="ic-tag ${TAG_CLASS[iss.tag]}">${TAG_LABEL[iss.tag]}</span><span class="ic-title">${iss.title}</span><span class="ic-date">${new Date(iss.date).toLocaleDateString('ko-KR',{year:'numeric',month:'numeric',day:'numeric'})}</span></div>${stars?`<div class="star-grid">${stars}</div>`:''}<div class="ic-actions"><button onclick="copyIssue(${iss.id})">복사</button><button onclick="delIssue(${iss.id})">삭제</button></div></div>`;
+    return`<div class="issue-card"><div class="ic-top"><span class="ic-tag ${TAG_CLASS[iss.tag]}">${TAG_LABEL[iss.tag]}</span><span class="ic-title">${iss.title}</span><span class="ic-date">${new Date(iss.date).toLocaleDateString('ko-KR',{year:'numeric',month:'numeric',day:'numeric'})}</span></div>${stars?`<div class="star-grid">${stars}</div>`:''}<div class="ic-actions"><button onclick="copyIssue(${iss.id})">복사</button><button onclick="delIssue(${iss.id})">삭제</button></div></div>`;
   }).join('');
 }
 
