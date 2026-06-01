@@ -54,6 +54,8 @@ button:hover{background:var(--color-background-secondary)}
 .b-eng{background:#EEEDFE;color:#3C3489}.b-non{background:#E6F1FB;color:#0C447C}
 .b-hired{background:#EAF3DE;color:#3B6D11}.b-rejected{background:#FCEBEB;color:#A32D2D}
 .b-withdrawn{background:#FAEEDA;color:#633806}.b-inprogress{background:#F1EFE8;color:#5F5E5A}
+.mode-badge{font-size:11px;padding:2px 7px;border-radius:999px;font-weight:500;white-space:nowrap}
+.mode-online{background:#E6F1FB;color:#185FA5}.mode-offline{background:#EAF3DE;color:#3B6D11}
 .cand-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:10px}
 .cand-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem}
 .cand-top{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
@@ -61,15 +63,16 @@ button:hover{background:var(--color-background-secondary)}
 .cand-pos{font-size:12px;color:var(--color-text-secondary)}
 .cand-date{font-size:11px;color:var(--color-text-tertiary)}
 .steps-area{margin-bottom:8px}
-.step-row{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:var(--border-radius-md);background:var(--color-background-secondary);margin-bottom:4px;flex-wrap:wrap}
+.step-row{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:var(--border-radius-md);background:var(--color-background-secondary);margin-bottom:4px;flex-wrap:wrap}
 .step-row.done-row{background:#EAF3DE}
 .step-check{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--color-border-primary);flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px}
 .step-row.done-row .step-check{background:#1D9E75;border-color:#1D9E75;color:#fff}
-.step-label{font-size:12px;color:var(--color-text-secondary);flex:1}
+.step-label{font-size:12px;color:var(--color-text-secondary);flex:1;min-width:100px}
 .step-row.done-row .step-label{color:#085041}
 .step-date{font-size:11px;color:var(--color-text-tertiary);white-space:nowrap}
-.step-date-input{height:26px;font-size:11px;width:120px;flex-shrink:0}
-.add-step-row{display:flex;gap:6px;align-items:center;margin-top:6px}
+.step-date-input{height:26px;font-size:11px;width:118px;flex-shrink:0}
+.step-mode-select{height:26px;font-size:11px;width:72px;flex-shrink:0}
+.add-step-row{display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap}
 .add-step-row select{height:28px;font-size:12px;flex:1}
 .add-step-row button{height:28px;font-size:12px;padding:0 10px}
 .onboard-row{display:flex;align-items:center;gap:8px;margin-top:6px;padding:5px 8px;border-radius:var(--border-radius-md);background:var(--color-background-secondary);cursor:pointer;user-select:none}
@@ -113,7 +116,7 @@ button:hover{background:var(--color-background-secondary)}
   body{padding:1rem}
   .metric-grid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
   .two-col{grid-template-columns:1fr}
-  .cand-grid{grid-template-columns:1fr}
+  .cand-grid,.issue-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -272,7 +275,7 @@ function addCandidate(){
   const dateVal=document.getElementById('c-date').value;
   const type=document.getElementById('c-type').value;
   if(!name){document.getElementById('c-name').focus();return;}
-  const steps=(type==='eng'?ENG_STEPS:NON_STEPS).filter(s=>selectedSteps.has(s.id)).map(s=>({id:s.id,label:s.label,done:false,doneDate:null}));
+  const steps=(type==='eng'?ENG_STEPS:NON_STEPS).filter(s=>selectedSteps.has(s.id)).map(s=>({id:s.id,label:s.label,done:false,doneDate:null,mode:null}));
   candidates.push({id:Date.now(),name,pos:pos||'',type,date:dateVal?new Date(dateVal).toISOString():new Date().toISOString(),steps,outcome:'in-progress',onboardDone:false});
   saveCands();
   document.getElementById('c-name').value='';document.getElementById('c-pos').value='';
@@ -284,8 +287,11 @@ function toggleStepDone(candId,stepId){
   const s=c.steps.find(s=>s.id===stepId);if(!s)return;
   if(!s.done){
     const dateEl=document.getElementById(`sd-${candId}-${stepId}`);
-    s.done=true;s.doneDate=dateEl&&dateEl.value?new Date(dateEl.value).toISOString():new Date().toISOString();
-  }else{s.done=false;s.doneDate=null;}
+    const modeEl=document.getElementById(`sm-${candId}-${stepId}`);
+    s.done=true;
+    s.doneDate=dateEl&&dateEl.value?new Date(dateEl.value).toISOString():new Date().toISOString();
+    s.mode=modeEl?modeEl.value:null;
+  }else{s.done=false;s.doneDate=null;s.mode=null;}
   saveCands();renderCandidates();renderMetrics();
 }
 
@@ -293,7 +299,7 @@ function addStep(candId){
   const c=candidates.find(c=>c.id===candId);if(!c)return;
   const selEl=document.getElementById(`sa-${candId}`);if(!selEl)return;
   const stepDef=ALL_STEPS.find(s=>s.id===selEl.value);if(!stepDef||c.steps.find(s=>s.id===stepDef.id))return;
-  c.steps.push({id:stepDef.id,label:stepDef.label,done:false,doneDate:null});
+  c.steps.push({id:stepDef.id,label:stepDef.label,done:false,doneDate:null,mode:null});
   saveCands();renderCandidates();renderMetrics();
 }
 
@@ -328,14 +334,19 @@ function renderCandidates(){
   el.innerHTML=list.map(c=>{
     const existIds=new Set(c.steps.map(s=>s.id));
     const addableSteps=ALL_STEPS.filter(s=>!existIds.has(s.id));
-    const stepsHtml=c.steps.map(s=>`
-      <div class="step-row ${s.done?'done-row':''}">
+    const stepsHtml=c.steps.map(s=>{
+      const modeBadge=s.done&&s.mode?`<span class="mode-badge ${s.mode==='online'?'mode-online':'mode-offline'}">${s.mode==='online'?'화상':'대면'}</span>`:'';
+      return `<div class="step-row ${s.done?'done-row':''}">
         <div class="step-check" onclick="toggleStepDone(${c.id},'${s.id}')">${s.done?'✓':''}</div>
         <span class="step-label">${s.label}</span>
-        ${s.done?`<span class="step-date">${fmtDate(s.doneDate)}</span>`:`<input type="date" class="step-date-input" id="sd-${c.id}-${s.id}" value="${now.toISOString().slice(0,10)}" />`}
-        ${!s.done?`<button style="height:22px;padding:0 6px;font-size:11px" onclick="removeStep(${c.id},'${s.id}')">✕</button>`:''}
-      </div>`).join('');
-    const addStepHtml=addableSteps.length?`<div class="add-step-row"><select id="sa-${c.id}">${addableSteps.map(s=>`<option value="${s.id}">${s.label}</option>`).join('')}</select><button onclick="addStep(${c.id})">+ 추가</button></div>`:'';
+        ${s.done
+          ?`${modeBadge}<span class="step-date">${fmtDate(s.doneDate)}</span>`
+          :`<select class="step-mode-select" id="sm-${c.id}-${s.id}"><option value="online">화상</option><option value="offline">대면</option></select><input type="date" class="step-date-input" id="sd-${c.id}-${s.id}" value="${now.toISOString().slice(0,10)}" />`
+        }
+        ${!s.done?`<button style="height:24px;padding:0 7px;font-size:11px" onclick="removeStep(${c.id},'${s.id}')">✕</button>`:''}
+      </div>`;
+    }).join('');
+    const addStepHtml=addableSteps.length?`<div class="add-step-row"><select id="sa-${c.id}">${addableSteps.map(s=>`<option value="${s.id}">${s.label}</option>`).join('')}</select><button onclick="addStep(${c.id})">+ 단계 추가</button></div>`:'';
     const onboardHtml=c.outcome==='hired'?`<div class="onboard-row ${c.onboardDone?'done':''}" onclick="toggleOnboard(${c.id})"><div class="onboard-check">${c.onboardDone?'✓':''}</div><span class="onboard-label">입사 안내 완료</span><span style="font-size:11px;margin-left:auto;color:${c.onboardDone?'#085041':'var(--color-text-tertiary)'}">${c.onboardDone?'완료':'미완료'}</span></div>`:'';
     return `<div class="cand-card">
       <div class="cand-top">
@@ -374,9 +385,7 @@ function changeMonth(d){curMonth+=d;if(curMonth>11){curMonth=0;curYear++;}if(cur
 
 function getStepsByMonth(y,m){
   let count=0;
-  candidates.forEach(c=>c.steps.forEach(s=>{
-    if(s.done&&s.doneDate){const d=new Date(s.doneDate);if(d.getFullYear()===y&&d.getMonth()===m)count++;}
-  }));
+  candidates.forEach(c=>c.steps.forEach(s=>{if(s.done&&s.doneDate){const d=new Date(s.doneDate);if(d.getFullYear()===y&&d.getMonth()===m)count++;}}));
   return count;
 }
 
@@ -389,8 +398,7 @@ function getUniqueCandCount(){
 function getMonthEntries(y,m){return entries.filter(e=>{const d=new Date(e.date);return d.getFullYear()===y&&d.getMonth()===m;});}
 
 function getMonthRange(){
-  const all=[...candidates.map(c=>new Date(c.date)),...entries.map(e=>new Date(e.date)),
-    ...candidates.flatMap(c=>c.steps.filter(s=>s.doneDate).map(s=>new Date(s.doneDate)))];
+  const all=[...candidates.map(c=>new Date(c.date)),...entries.map(e=>new Date(e.date)),...candidates.flatMap(c=>c.steps.filter(s=>s.doneDate).map(s=>new Date(s.doneDate)))];
   if(!all.length)return[];
   let minY=Math.min(...all.map(d=>d.getFullYear())),maxY=Math.max(...all.map(d=>d.getFullYear()));
   let minM=Math.min(...all.filter(d=>d.getFullYear()===minY).map(d=>d.getMonth()));
@@ -432,10 +440,13 @@ function renderMetrics(){
   entries.forEach(e=>{const d=new Date(e.date),k=d.getFullYear()+'-'+d.getMonth();if(!mKeys[k])mKeys[k]={jd:0};if(e.type==='jd')mKeys[k].jd++;});
   const ks=Object.keys(mKeys);
   const avgJd=ks.length?Math.round(ks.reduce((s,k)=>s+mKeys[k].jd,0)/ks.length):0;
+  const allOnlineSteps=candidates.reduce((s,c)=>s+c.steps.filter(st=>st.done&&st.mode==='online').length,0);
+  const allOfflineSteps=candidates.reduce((s,c)=>s+c.steps.filter(st=>st.done&&st.mode==='offline').length,0);
+
   let sum='';
   if(allJd>0)sum+=`• 월 평균 ${avgJd}개 포지션 공고 오픈 및 파이프라인 운영\n`;
   if(uniqueCands>0)sum+=`• 총 ${uniqueCands}명 후보자 인터뷰 프로세스 관리\n`;
-  if(allSteps>0)sum+=`• 총 ${allSteps}건 인터뷰 단계 어레인지 완료\n`;
+  if(allSteps>0){sum+=`• 총 ${allSteps}건 인터뷰 단계 어레인지 완료`;if(allOnlineSteps>0||allOfflineSteps>0)sum+=` (화상 ${allOnlineSteps}건, 대면 ${allOfflineSteps}건)`;sum+='\n';}
   if(allHired>0)sum+=`• 누적 ${allHired}명 채용 전환 완료\n`;
   if(uniqueCands>0&&allHired>0)sum+=`• 후보자 대비 채용 전환율 ${convRate}%\n`;
   if(allJd>0&&allHired>0)sum+=`• 공고 대비 충원율 ${fillRate}% 달성\n`;
@@ -475,17 +486,13 @@ function addIssue(){
 }
 
 function delIssue(id){issues=issues.filter(i=>i.id!==id);saveIssues();renderIssues();}
-
 function copyIssue(id){
   const iss=issues.find(i=>i.id===id);if(!iss)return;
   let txt=iss.title;
   if(iss.s)txt+='\n[상황] '+iss.s;if(iss.t)txt+='\n[문제] '+iss.t;if(iss.a)txt+='\n[행동] '+iss.a;if(iss.r)txt+='\n[결과] '+iss.r;
   navigator.clipboard.writeText(txt);
 }
-
-function setIssueFilter(f,btn){
-  issueFilter=f;document.querySelectorAll('#pane-issues .filter-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderIssues();
-}
+function setIssueFilter(f,btn){issueFilter=f;document.querySelectorAll('#pane-issues .filter-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderIssues();}
 
 function renderIssues(){
   const filtered=issueFilter==='all'?issues:issues.filter(i=>i.tag===issueFilter);
