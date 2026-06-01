@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>리크루팅 성과 트래커</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.x/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --color-background-primary:#ffffff;
+  --color-background-secondary:#f5f5f4;
+  --color-text-primary:#1a1a18;
+  --color-text-secondary:#6b6b67;
+  --color-text-tertiary:#a3a39e;
+  --color-border-tertiary:rgba(0,0,0,0.1);
+  --color-border-secondary:rgba(0,0,0,0.18);
+  --color-border-primary:rgba(0,0,0,0.28);
+  --border-radius-md:8px;
+  --border-radius-lg:12px;
+  --font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+@media(prefers-color-scheme:dark){:root{
+  --color-background-primary:#1c1c1a;
+  --color-background-secondary:#2a2a27;
+  --color-text-primary:#f0f0ed;
+  --color-text-secondary:#a3a39e;
+  --color-text-tertiary:#6b6b67;
+  --color-border-tertiary:rgba(255,255,255,0.1);
+  --color-border-secondary:rgba(255,255,255,0.18);
+  --color-border-primary:rgba(255,255,255,0.28);
+}}
+body{font-family:var(--font-sans);background:var(--color-background-secondary);color:var(--color-text-primary);padding:1.5rem;min-height:100vh}
+.container{max-width:720px;margin:0 auto}
+.tabs{display:flex;gap:0;margin-bottom:1.5rem;border-bottom:0.5px solid var(--color-border-tertiary)}
+.tab{padding:8px 20px;font-size:14px;font-weight:500;color:var(--color-text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;background:none;border-top:none;border-left:none;border-right:none}
+.tab.active{color:var(--color-text-primary);border-bottom:2px solid var(--color-text-primary)}
+.tab:hover:not(.active){color:var(--color-text-primary)}
+.pane{display:none}.pane.active{display:block}
+.sec{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1.25rem;margin-bottom:1.25rem}
+.sec-title{font-size:12px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:10px;margin-bottom:1.25rem}
+.mc{background:var(--color-background-primary);border-radius:var(--border-radius-md);padding:.9rem}
+.mc .lb{font-size:11px;color:var(--color-text-secondary);margin-bottom:5px}
+.mc .vl{font-size:22px;font-weight:500;color:var(--color-text-primary)}
+.mc .sb{font-size:11px;color:var(--color-text-tertiary);margin-top:2px}
+.mc.green .vl{color:#1D9E75}.mc.blue .vl{color:#185FA5}.mc.purple .vl{color:#534AB7}
+input,select,textarea{font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:0 9px;background:var(--color-background-primary);color:var(--color-text-primary);width:100%}
+input{height:34px}input[type=date]{padding:0 7px}select{height:34px}
+textarea{padding:8px 10px;resize:vertical;line-height:1.6}
+button{height:34px;padding:0 14px;font-size:13px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);cursor:pointer;color:var(--color-text-primary);white-space:nowrap}
+button:hover{background:var(--color-background-secondary)}
+.badge{font-size:11px;padding:2px 8px;border-radius:999px;white-space:nowrap;font-weight:500}
+.b-eng{background:#EEEDFE;color:#3C3489}.b-non{background:#E6F1FB;color:#0C447C}
+.b-hired{background:#EAF3DE;color:#3B6D11}.b-rejected{background:#FCEBEB;color:#A32D2D}
+.b-withdrawn{background:#FAEEDA;color:#633806}.b-pending{background:#F1EFE8;color:#5F5E5A}
+.cand-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:8px}
+.cand-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.cand-name{font-size:14px;font-weight:500;color:var(--color-text-primary);flex:1}
+.cand-pos{font-size:12px;color:var(--color-text-secondary)}
+.cand-date{font-size:11px;color:var(--color-text-tertiary)}
+.cand-steps{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.step-chip{font-size:11px;padding:3px 10px;border-radius:999px;border:0.5px solid var(--color-border-secondary);color:var(--color-text-secondary);background:var(--color-background-secondary);white-space:nowrap;cursor:pointer}
+.step-chip.done{background:#EAF3DE;color:#3B6D11;border-color:#97C459}
+.step-chip.current{background:#E6F1FB;color:#185FA5;border-color:#85B7EB}
+.step-arrow{font-size:11px;color:var(--color-text-tertiary)}
+.cand-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;border-top:0.5px solid var(--color-border-tertiary);padding-top:8px}
+.onboard-row{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:var(--border-radius-md);background:var(--color-background-secondary);cursor:pointer;user-select:none}
+.onboard-row.done{background:#EAF3DE}
+.onboard-check{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--color-border-primary);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.onboard-row.done .onboard-check{background:#1D9E75;border-color:#1D9E75;color:#fff}
+.onboard-label{font-size:13px;color:var(--color-text-secondary)}
+.onboard-row.done .onboard-label{color:#085041;text-decoration:line-through}
+.step-toggle{font-size:12px;padding:4px 12px;border-radius:999px;cursor:pointer;border:0.5px solid var(--color-border-secondary);color:var(--color-text-secondary);background:none;height:auto;white-space:nowrap}
+.step-toggle.on{background:#EEEDFE;color:#3C3489;border-color:#AFA9EC}
+.form-row{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+.form-row>*{flex:1;min-width:100px}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.filter-btn{height:28px;padding:0 12px;font-size:12px;background:none;border:0.5px solid var(--color-border-secondary);border-radius:999px;cursor:pointer;color:var(--color-text-secondary)}
+.filter-btn.on{background:var(--color-background-secondary);color:var(--color-text-primary);border-color:var(--color-border-primary)}
+.empty{color:var(--color-text-tertiary);font-size:13px;text-align:center;padding:1.5rem 0}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px}
+.month-nav{display:flex;align-items:center;gap:8px}
+.month-nav button{padding:4px 10px;font-size:13px}
+.month-nav span{font-size:14px;font-weight:500;color:var(--color-text-primary);min-width:90px;text-align:center}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--color-text-secondary)}
+.legend-dot{width:8px;height:8px;border-radius:50%}
+.sum-box{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:1rem 1.25rem;font-size:13px;color:var(--color-text-secondary);line-height:2;white-space:pre-wrap}
+.issue-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:8px}
+.ic-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.ic-title{flex:1;font-size:14px;font-weight:500;color:var(--color-text-primary)}
+.ic-date{font-size:11px;color:var(--color-text-tertiary)}
+.ic-tag{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:500}
+.tag-candidate{background:#FBEAF0;color:#72243E}.tag-process{background:#E6F1FB;color:#0C447C}
+.tag-internal{background:#FAEEDA;color:#633806}.tag-other{background:#F1EFE8;color:#444441}
+.star-grid{display:grid;grid-template-columns:52px 1fr;gap:4px 10px;font-size:13px;margin-bottom:6px}
+.star-label{font-size:11px;font-weight:500;color:var(--color-text-tertiary);padding-top:2px;text-transform:uppercase;letter-spacing:.04em}
+.star-text{color:var(--color-text-secondary);line-height:1.6}
+.ic-actions{display:flex;gap:6px;justify-content:flex-end;border-top:0.5px solid var(--color-border-tertiary);padding-top:8px}
+.ic-actions button{height:28px;padding:0 10px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('metrics')">성과 수치</button>
+    <button class="tab" onclick="switchTab('candidates')">후보자</button>
+    <button class="tab" onclick="switchTab('issues')">이슈 메모</button>
+  </div>
+
+  <div id="pane-metrics" class="pane active">
+    <div class="topbar">
+      <div style="font-size:15px;font-weight:500;color:var(--color-text-primary)">월별 성과</div>
+      <div class="month-nav">
+        <button onclick="changeMonth(-1)">‹</button>
+        <span id="month-label"></span>
+        <button onclick="changeMonth(1)">›</button>
+      </div>
+    </div>
+    <div class="metric-grid" id="metrics"></div>
+    <div class="sec">
+      <div class="sec-title">공고 / 사내 추천 기록</div>
+      <div class="form-row">
+        <input id="e-name" placeholder="공고명 / 추천인" />
+        <input id="e-pos" placeholder="포지션" />
+        <input type="date" id="e-date" />
+        <select id="e-type">
+          <option value="jd">공고 오픈</option>
+          <option value="referral">사내 추천</option>
+        </select>
+        <button onclick="addEntry()">+ 추가</button>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-title">월별 활동 추이</div>
+      <div style="overflow-x:auto"><canvas id="trend-chart" height="180"></canvas></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="sec">
+      <div class="sec-title">이력서용 문구 자동 생성</div>
+      <div class="sum-box" id="sum-box"></div>
+      <button style="margin-top:10px;width:100%" onclick="copySummary()">클립보드에 복사</button>
+    </div>
+  </div>
+
+  <div id="pane-candidates" class="pane">
+    <div class="sec">
+      <div class="sec-title">후보자 추가</div>
+      <div class="form-row" style="margin-bottom:8px">
+        <input id="c-name" placeholder="후보자 이름" />
+        <input id="c-pos" placeholder="포지션" />
+        <input type="date" id="c-date" />
+        <select id="c-type" onchange="renderStepSelector()">
+          <option value="eng">Engineer</option>
+          <option value="non">Non-Engineer</option>
+        </select>
+      </div>
+      <div id="step-selector"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px">
+        <button onclick="addCandidate()">+ 추가</button>
+      </div>
+    </div>
+    <div class="filter-row">
+      <button class="filter-btn on" onclick="setCandFilter('all',this)">전체</button>
+      <button class="filter-btn" onclick="setCandFilter('eng',this)">Engineer</button>
+      <button class="filter-btn" onclick="setCandFilter('non',this)">Non-Engineer</button>
+      <button class="filter-btn" onclick="setCandFilter('hired',this)">채용됨</button>
+      <button class="filter-btn" onclick="setCandFilter('in-progress',this)">진행중</button>
+      <button class="filter-btn" onclick="setCandFilter('rejected',this)">불합격</button>
+    </div>
+    <div id="cand-list"></div>
+  </div>
+
+  <div id="pane-issues" class="pane">
+    <div class="sec">
+      <div class="sec-title">이슈 추가</div>
+      <div class="form-row" style="margin-bottom:8px">
+        <input id="iss-title" placeholder="한 줄 제목" style="flex:2" />
+        <input type="date" id="iss-date" />
+        <select id="iss-tag">
+          <option value="candidate">후보자 이슈</option>
+          <option value="process">프로세스 이슈</option>
+          <option value="internal">내부 이슈</option>
+          <option value="other">기타</option>
+        </select>
+      </div>
+      <textarea id="iss-s" placeholder="상황 (S)" style="margin-bottom:6px;height:60px"></textarea>
+      <textarea id="iss-t" placeholder="문제 (T)" style="margin-bottom:6px;height:60px"></textarea>
+      <textarea id="iss-a" placeholder="행동 (A)" style="margin-bottom:6px;height:60px"></textarea>
+      <textarea id="iss-r" placeholder="결과 (R)" style="margin-bottom:8px;height:60px"></textarea>
+      <div style="display:flex;justify-content:flex-end"><button onclick="addIssue()">+ 저장</button></div>
+    </div>
+    <div class="filter-row">
+      <button class="filter-btn on" onclick="setIssueFilter('all',this)">전체</button>
+      <button class="filter-btn" onclick="setIssueFilter('candidate',this)">후보자 이슈</button>
+      <button class="filter-btn" onclick="setIssueFilter('process',this)">프로세스 이슈</button>
+      <button class="filter-btn" onclick="setIssueFilter('internal',this)">내부 이슈</button>
+      <button class="filter-btn" onclick="setIssueFilter('other',this)">기타</button>
+    </div>
+    <div id="issue-list"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const ENG_STEPS=[{id:'ps',label:'Problem Solving'},{id:'sd',label:'System Design'},{id:'dk',label:'Domain Knowledge'},{id:'sd_dk',label:'System Design & Domain Knowledge'},{id:'culture1',label:'조직문화 R1'},{id:'culture2',label:'조직문화 R2'}];
+const NON_STEPS=[{id:'job',label:'직무 인터뷰'},{id:'culture',label:'조직문화'}];
+const OUTCOME_LABEL={hired:'채용됨',rejected:'불합격',withdrawn:'중도 이탈','in-progress':'진행중'};
+const OUTCOME_BADGE={hired:'b-hired',rejected:'b-rejected',withdrawn:'b-withdrawn','in-progress':'b-pending'};
+const TAG_LABEL={candidate:'후보자 이슈',process:'프로세스 이슈',internal:'내부 이슈',other:'기타'};
+const TAG_CLASS={candidate:'tag-candidate',process:'tag-process',internal:'tag-internal',other:'tag-other'};
+const MONTHS=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+let candidates=[],entries=[],issues=[],selectedSteps=new Set(),candFilter='all',issueFilter='all';
+let curYear=new Date().getFullYear(),curMonth=new Date().getMonth(),chartInst=null;
+
+try{candidates=JSON.parse(localStorage.getItem('rec_cands_v1')||'[]');}catch(e){}
+try{entries=JSON.parse(localStorage.getItem('rec_entries_v7')||'[]');}catch(e){}
+try{issues=JSON.parse(localStorage.getItem('rec_issues_v1')||'[]');}catch(e){}
+
+const now=new Date();
+document.getElementById('c-date').value=now.toISOString().slice(0,10);
+document.getElementById('e-date').value=now.toISOString().slice(0,10);
+document.getElementById('iss-date').value=now.toISOString().slice(0,10);
+
+function saveCands(){try{localStorage.setItem('rec_cands_v1',JSON.stringify(candidates));}catch(e){}}
+function saveEntries(){try{localStorage.setItem('rec_entries_v7',JSON.stringify(entries));}catch(e){}}
+function saveIssues(){try{localStorage.setItem('rec_issues_v1',JSON.stringify(issues));}catch(e){}}
+
+function switchTab(t){
+  ['metrics','candidates','issues'].forEach((id,i)=>{
+    document.getElementById('pane-'+id).classList.toggle('active',id===t);
+    document.querySelectorAll('.tab')[i].classList.toggle('active',id===t);
+  });
+  if(t==='metrics') renderMetrics();
+}
+
+function renderStepSelector(){
+  const type=document.getElementById('c-type').value;
+  const steps=type==='eng'?ENG_STEPS:NON_STEPS;
+  selectedSteps=new Set(steps.map(s=>s.id));
+  document.getElementById('step-selector').innerHTML=`
+    <div style="margin-bottom:4px;font-size:12px;color:var(--color-text-secondary)">인터뷰 단계 선택 (해당 없는 단계는 해제)</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${steps.map(s=>`<button class="step-toggle on" id="stog-${s.id}" onclick="toggleStep('${s.id}')">${s.label}</button>`).join('')}</div>`;
+}
+
+function toggleStep(id){
+  selectedSteps.has(id)?selectedSteps.delete(id):selectedSteps.add(id);
+  document.getElementById('stog-'+id).classList.toggle('on',selectedSteps.has(id));
+}
+
+function addCandidate(){
+  const name=document.getElementById('c-name').value.trim();
+  const pos=document.getElementById('c-pos').value.trim();
+  const dateVal=document.getElementById('c-date').value;
+  const type=document.getElementById('c-type').value;
+  if(!name){document.getElementById('c-name').focus();return;}
+  const steps=(type==='eng'?ENG_STEPS:NON_STEPS).filter(s=>selectedSteps.has(s.id)).map(s=>({id:s.id,label:s.label,status:'pending'}));
+  candidates.push({id:Date.now(),name,pos:pos||'',type,date:dateVal?new Date(dateVal).toISOString():new Date().toISOString(),steps,outcome:'in-progress',onboardDone:false});
+  saveCands();
+  document.getElementById('c-name').value='';document.getElementById('c-pos').value='';
+  renderCandidates();renderMetrics();
+}
+
+function cycleStep(candId,stepId){
+  const c=candidates.find(c=>c.id===candId);if(!c)return;
+  const s=c.steps.find(s=>s.id===stepId);if(!s)return;
+  const order=['pending','current','done'];
+  s.status=order[(order.indexOf(s.status)+1)%order.length];
+  saveCands();renderCandidates();renderMetrics();
+}
+
+function updateOutcome(candId,outcome){
+  const c=candidates.find(c=>c.id===candId);
+  if(c){c.outcome=outcome;if(outcome!=='hired')c.onboardDone=false;saveCands();renderCandidates();renderMetrics();}
+}
+
+function toggleOnboard(candId){
+  const c=candidates.find(c=>c.id===candId);
+  if(c){c.onboardDone=!c.onboardDone;saveCands();renderCandidates();}
+}
+
+function delCandidate(id){candidates=candidates.filter(c=>c.id!==id);saveCands();renderCandidates();renderMetrics();}
+
+function setCandFilter(f,btn){
+  candFilter=f;
+  document.querySelectorAll('#pane-candidates .filter-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');renderCandidates();
+}
+
+function renderCandidates(){
+  let list=[...candidates].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(candFilter==='eng')list=list.filter(c=>c.type==='eng');
+  else if(candFilter==='non')list=list.filter(c=>c.type==='non');
+  else if(candFilter==='hired')list=list.filter(c=>c.outcome==='hired');
+  else if(candFilter==='in-progress')list=list.filter(c=>c.outcome==='in-progress');
+  else if(candFilter==='rejected')list=list.filter(c=>c.outcome==='rejected');
+  const el=document.getElementById('cand-list');
+  if(!list.length){el.innerHTML='<div class="empty">등록된 후보자가 없어요</div>';return;}
+  el.innerHTML=list.map(c=>{
+    const stepHtml=c.steps.map((s,i)=>`${i>0?'<span class="step-arrow">›</span>':''}<span class="step-chip ${s.status}" onclick="cycleStep(${c.id},'${s.id}')">${s.label}</span>`).join('');
+    const onboardHtml=c.outcome==='hired'?`<div class="onboard-row ${c.onboardDone?'done':''}" onclick="toggleOnboard(${c.id})"><div class="onboard-check">${c.onboardDone?'✓':''}</div><span class="onboard-label">입사 안내 완료</span><span style="font-size:11px;margin-left:auto;color:${c.onboardDone?'#085041':'var(--color-text-tertiary)'}">${c.onboardDone?'완료':'미완료'}</span></div>`:'';
+    return `<div class="cand-card"><div class="cand-top"><span class="badge ${c.type==='eng'?'b-eng':'b-non'}">${c.type==='eng'?'Engineer':'Non-Eng'}</span><span class="cand-name">${c.name}</span><span class="cand-pos">${c.pos}</span><span class="badge ${OUTCOME_BADGE[c.outcome]}">${OUTCOME_LABEL[c.outcome]}</span><span class="cand-date">${new Date(c.date).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})}</span></div><div class="cand-steps">${stepHtml}</div>${onboardHtml}<div class="cand-actions"><span style="font-size:12px;color:var(--color-text-tertiary)">최종 결과</span><select onchange="updateOutcome(${c.id},this.value)" style="height:28px;font-size:12px;width:auto"><option value="in-progress" ${c.outcome==='in-progress'?'selected':''}>진행중</option><option value="hired" ${c.outcome==='hired'?'selected':''}>채용됨</option><option value="rejected" ${c.outcome==='rejected'?'selected':''}>불합격</option><option value="withdrawn" ${c.outcome==='withdrawn'?'selected':''}>중도 이탈</option></select><button onclick="delCandidate(${c.id})" style="margin-left:auto">삭제</button></div></div>`;
+  }).join('');
+}
+
+function addEntry(){
+  const name=document.getElementById('e-name').value.trim();
+  if(!name){document.getElementById('e-name').focus();return;}
+  const dateVal=document.getElementById('e-date').value;
+  entries.push({id:Date.now(),name,pos:document.getElementById('e-pos').value.trim(),type:document.getElementById('e-type').value,date:dateVal?new Date(dateVal).toISOString():new Date().toISOString()});
+  saveEntries();document.getElementById('e-name').value='';document.getElementById('e-pos').value='';renderMetrics();
+}
+
+function getMonthCands(y,m){return candidates.filter(c=>{const d=new Date(c.date);return d.getFullYear()===y&&d.getMonth()===m;});}
+function getMonthEntries(y,m){return entries.filter(e=>{const d=new Date(e.date);return d.getFullYear()===y&&d.getMonth()===m;});}
+function cntType(arr,t){return arr.filter(e=>e.type===t).length;}
+function fmtMonth(y,m){return y+'년 '+MONTHS[m];}
+function changeMonth(d){curMonth+=d;if(curMonth>11){curMonth=0;curYear++;}if(curMonth<0){curMonth=11;curYear--;}renderMetrics();}
+
+function getMonthRange(){
+  const all=[...candidates.map(c=>new Date(c.date)),...entries.map(e=>new Date(e.date))];
+  if(!all.length)return[];
+  let minY=Math.min(...all.map(d=>d.getFullYear())),maxY=Math.max(...all.map(d=>d.getFullYear()));
+  let minM=Math.min(...all.filter(d=>d.getFullYear()===minY).map(d=>d.getMonth()));
+  let maxM=Math.max(...all.filter(d=>d.getFullYear()===maxY).map(d=>d.getMonth()));
+  const range=[];let y=minY,m=minM;
+  while(y<maxY||(y===maxY&&m<=maxM)){range.push({y,m});m++;if(m>11){m=0;y++;}}
+  return range;
+}
+
+function renderMetrics(){
+  document.getElementById('month-label').textContent=fmtMonth(curYear,curMonth);
+  const mC=getMonthCands(curYear,curMonth),mE=getMonthEntries(curYear,curMonth);
+  const allHired=candidates.filter(c=>c.outcome==='hired').length;
+  const allIv=candidates.length,allJd=cntType(entries,'jd');
+  const mHired=mC.filter(c=>c.outcome==='hired').length;
+  const mSteps=mC.reduce((s,c)=>s+c.steps.filter(st=>st.status==='done').length,0);
+  const convRate=allIv>0?Math.round(allHired/allIv*100):0;
+  const fillRate=allJd>0?Math.round(allHired/allJd*100):0;
+  document.getElementById('metrics').innerHTML=`
+    <div class="mc blue"><div class="lb">공고 오픈</div><div class="vl">${cntType(mE,'jd')}</div><div class="sb">누적 ${allJd}건</div></div>
+    <div class="mc"><div class="lb">사내 추천</div><div class="vl">${cntType(mE,'referral')}</div><div class="sb">누적 ${cntType(entries,'referral')}건</div></div>
+    <div class="mc purple"><div class="lb">인터뷰 어레인지</div><div class="vl">${mC.length}명</div><div class="sb">완료 단계 ${mSteps}건</div></div>
+    <div class="mc green"><div class="lb">채용 전환</div><div class="vl">${mHired}명</div><div class="sb">전환율 ${convRate}%</div></div>`;
+  renderTrend();
+  const mKeys={};
+  [...candidates,...entries].forEach(e=>{const d=new Date(e.date),k=d.getFullYear()+'-'+d.getMonth();if(!mKeys[k])mKeys[k]={iv:0,jd:0};if(e.steps!==undefined)mKeys[k].iv++;if(e.type==='jd')mKeys[k].jd++;});
+  const ks=Object.keys(mKeys);
+  const avgIv=ks.length?Math.round(ks.reduce((s,k)=>s+mKeys[k].iv,0)/ks.length):0;
+  const avgJd=ks.length?Math.round(ks.reduce((s,k)=>s+mKeys[k].jd,0)/ks.length):0;
+  const allSteps=candidates.reduce((s,c)=>s+c.steps.filter(st=>st.status==='done').length,0);
+  const allOnboard=candidates.filter(c=>c.outcome==='hired'&&c.onboardDone).length;
+  let sum='';
+  if(allJd>0)sum+=`• 월 평균 ${avgJd}개 포지션 공고 오픈 및 파이프라인 운영\n`;
+  if(allIv>0)sum+=`• 월 평균 ${avgIv}명 후보자 인터뷰 프로세스 관리\n`;
+  if(allSteps>0)sum+=`• 총 ${allSteps}건 인터뷰 단계 어레인지 완료\n`;
+  if(allHired>0)sum+=`• 누적 ${allHired}명 채용 전환 완료\n`;
+  if(allIv>0&&allHired>0)sum+=`• 인터뷰 → 채용 전환율 ${convRate}%\n`;
+  if(allJd>0&&allHired>0)sum+=`• 공고 대비 충원율 ${fillRate}% 달성\n`;
+  if(allOnboard>0)sum+=`• ${allOnboard}명 입사 안내 완료\n`;
+  if(cntType(entries,'referral')>0)sum+=`• 사내 추천 파이프라인 ${cntType(entries,'referral')}건 운영\n`;
+  if(!sum)sum='아직 데이터가 없어요.\n활동을 기록하면 이력서용 문구가 자동으로 생성됩니다.';
+  document.getElementById('sum-box').textContent=sum.trim();
+}
+
+function renderTrend(){
+  const range=getMonthRange();const canvas=document.getElementById('trend-chart');
+  if(chartInst){chartInst.destroy();chartInst=null;}
+  if(range.length<2){canvas.style.display='none';document.getElementById('legend').innerHTML='<span style="font-size:12px;color:var(--color-text-tertiary)">2개월 이상 데이터가 쌓이면 추이가 보여요</span>';return;}
+  canvas.style.display='block';canvas.width=canvas.parentElement.offsetWidth||680;
+  const labels=range.map(({y,m})=>m===0?y+'년 1월':MONTHS[m]);
+  const series=[{label:'공고 오픈',color:'#7F77DD',fn:({y,m})=>cntType(getMonthEntries(y,m),'jd')},{label:'인터뷰 어레인지',color:'#1D9E75',fn:({y,m})=>getMonthCands(y,m).length},{label:'채용 전환',color:'#639922',fn:({y,m})=>getMonthCands(y,m).filter(c=>c.outcome==='hired').length}];
+  chartInst=new Chart(canvas,{type:'line',data:{labels,datasets:series.map(s=>({label:s.label,data:range.map(s.fn),borderColor:s.color,backgroundColor:s.color+'22',borderWidth:1.5,pointRadius:3,pointBackgroundColor:s.color,tension:0.3,fill:false}))},options:{responsive:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11},stepSize:1,precision:0},beginAtZero:true}}}});
+  document.getElementById('legend').innerHTML=series.map(s=>`<div class="legend-item"><div class="legend-dot" style="background:${s.color}"></div>${s.label}</div>`).join('');
+}
+
+function copySummary(){
+  navigator.clipboard.writeText(document.getElementById('sum-box').textContent).then(()=>{
+    const b=document.querySelector('#pane-metrics button[onclick="copySummary()"]');
+    if(b){b.textContent='복사됐어요 ✓';setTimeout(()=>{b.textContent='클립보드에 복사';},1800);}
+  });
+}
+
+function addIssue(){
+  const title=document.getElementById('iss-title').value.trim();
+  if(!title){document.getElementById('iss-title').focus();return;}
+  const dateVal=document.getElementById('iss-date').value;
+  issues.push({id:Date.now(),title,tag:document.getElementById('iss-tag').value,date:dateVal?new Date(dateVal).toISOString():new Date().toISOString(),s:document.getElementById('iss-s').value.trim(),t:document.getElementById('iss-t').value.trim(),a:document.getElementById('iss-a').value.trim(),r:document.getElementById('iss-r').value.trim()});
+  saveIssues();['iss-title','iss-s','iss-t','iss-a','iss-r'].forEach(id=>{document.getElementById(id).value='';});renderIssues();
+}
+
+function delIssue(id){issues=issues.filter(i=>i.id!==id);saveIssues();renderIssues();}
+
+function copyIssue(id){
+  const iss=issues.find(i=>i.id===id);if(!iss)return;
+  let txt=iss.title;
+  if(iss.s)txt+='\n[상황] '+iss.s;if(iss.t)txt+='\n[문제] '+iss.t;if(iss.a)txt+='\n[행동] '+iss.a;if(iss.r)txt+='\n[결과] '+iss.r;
+  navigator.clipboard.writeText(txt);
+}
+
+function setIssueFilter(f,btn){
+  issueFilter=f;document.querySelectorAll('#pane-issues .filter-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderIssues();
+}
+
+function renderIssues(){
+  const filtered=issueFilter==='all'?issues:issues.filter(i=>i.tag===issueFilter);
+  const el=document.getElementById('issue-list');
+  if(!filtered.length){el.innerHTML='<div class="empty">기록된 이슈가 없어요</div>';return;}
+  el.innerHTML=[...filtered].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(iss=>{
+    const stars=[iss.s?`<div class="star-label">상황</div><div class="star-text">${iss.s}</div>`:'',iss.t?`<div class="star-label">문제</div><div class="star-text">${iss.t}</div>`:'',iss.a?`<div class="star-label">행동</div><div class="star-text">${iss.a}</div>`:'',iss.r?`<div class="star-label">결과</div><div class="star-text">${iss.r}</div>`:''
+    ].filter(Boolean).join('');
+    return `<div class="issue-card"><div class="ic-top"><span class="ic-tag ${TAG_CLASS[iss.tag]}">${TAG_LABEL[iss.tag]}</span><span class="ic-title">${iss.title}</span><span class="ic-date">${new Date(iss.date).toLocaleDateString('ko-KR',{year:'numeric',month:'numeric',day:'numeric'})}</span></div>${stars?`<div class="star-grid">${stars}</div>`:''}<div class="ic-actions"><button onclick="copyIssue(${iss.id})">복사</button><button onclick="delIssue(${iss.id})">삭제</button></div></div>`;
+  }).join('');
+}
+
+renderStepSelector();renderCandidates();renderMetrics();renderIssues();
+</script>
+</body>
+</html>
