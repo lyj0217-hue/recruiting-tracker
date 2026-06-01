@@ -184,7 +184,7 @@ button:hover{background:var(--color-background-secondary)}
       <div class="form-row" style="margin-bottom:8px">
         <input id="c-name" placeholder="후보자 이름" />
         <input id="c-pos" placeholder="포지션 (예: Backend Engineer)" />
-        <input type="date" id="c-date" />
+        
         <select id="c-type" onchange="renderStepSelector()">
           <option value="eng">Engineer</option>
           <option value="non">Non-Engineer</option>
@@ -293,7 +293,7 @@ try{entries=JSON.parse(localStorage.getItem('rec_entries_v7')||'[]');}catch(e){}
 try{issues=JSON.parse(localStorage.getItem('rec_issues_v1')||'[]');}catch(e){}
 
 const now=new Date();
-['c-date','e-date','iss-date'].forEach(id=>document.getElementById(id).value=now.toISOString().slice(0,10));
+['e-date','iss-date'].forEach(id=>document.getElementById(id).value=now.toISOString().slice(0,10));
 
 function saveCands(){try{localStorage.setItem('rec_cands_v2',JSON.stringify(candidates));}catch(e){}}
 function saveEntries(){try{localStorage.setItem('rec_entries_v7',JSON.stringify(entries));}catch(e){}}
@@ -365,10 +365,10 @@ function renderStepSelector(){
 function toggleStep(id){selectedSteps.has(id)?selectedSteps.delete(id):selectedSteps.add(id);document.getElementById('stog-'+id).classList.toggle('on',selectedSteps.has(id));}
 
 function addCandidate(){
-  const name=document.getElementById('c-name').value.trim(),pos=document.getElementById('c-pos').value.trim(),dateVal=document.getElementById('c-date').value,type=document.getElementById('c-type').value;
+  const name=document.getElementById('c-name').value.trim(),pos=document.getElementById('c-pos').value.trim(),type=document.getElementById('c-type').value;
   if(!name){document.getElementById('c-name').focus();return;}
   const steps=(type==='eng'?ENG_STEPS:NON_STEPS).filter(s=>selectedSteps.has(s.id)).map(s=>({id:s.id,label:s.label,done:false,doneDate:null,mode:null}));
-  candidates.push({id:Date.now(),name,pos:pos||'',type,date:dateVal?new Date(dateVal).toISOString():new Date().toISOString(),steps,outcome:'in-progress',onboardDone:false});
+  candidates.push({id:Date.now(),name,pos:pos||'',type,date:new Date().toISOString(),steps,outcome:'in-progress',onboardDone:false});
   saveCands();document.getElementById('c-name').value='';document.getElementById('c-pos').value='';renderCandidates();renderMetrics();
 }
 
@@ -474,7 +474,7 @@ function copySummary(){navigator.clipboard.writeText(document.getElementById('su
 function addIssue(){
   const title=document.getElementById('iss-title').value.trim();if(!title){document.getElementById('iss-title').focus();return;}
   const dateVal=document.getElementById('iss-date').value;
-  issues.push({id:Date.now(),title,tag:document.getElementById('iss-tag').value,date:dateVal?new Date(dateVal).toISOString():new Date().toISOString(),s:document.getElementById('iss-s').value.trim(),t:document.getElementById('iss-t').value.trim(),a:document.getElementById('iss-a').value.trim(),r:document.getElementById('iss-r').value.trim()});
+  issues.push({id:Date.now(),title,tag:document.getElementById('iss-tag').value,date:new Date().toISOString(),s:document.getElementById('iss-s').value.trim(),t:document.getElementById('iss-t').value.trim(),a:document.getElementById('iss-a').value.trim(),r:document.getElementById('iss-r').value.trim()});
   saveIssues();['iss-title','iss-s','iss-t','iss-a','iss-r'].forEach(id=>{document.getElementById(id).value='';});renderIssues();
 }
 function delIssue(id){issues=issues.filter(i=>i.id!==id);saveIssues();renderIssues();}
