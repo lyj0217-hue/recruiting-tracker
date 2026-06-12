@@ -157,12 +157,12 @@ button:hover{background:var(--color-background-secondary)}
     <div class="metric-grid" id="metrics"></div>
     <div class="two-col">
       <div class="sec">
-        <div class="sec-title">공고 / 사내 추천 기록</div>
+        <div class="sec-title">공고 / 티타임 기록</div>
         <div class="form-row">
-          <input id="e-name" placeholder="공고명 / 추천인" />
+          <input id="e-name" placeholder="공고명 / 후보자명" />
           <input id="e-pos" placeholder="포지션" />
           <input type="date" id="e-date" />
-          <select id="e-type"><option value="jd">공고 오픈</option><option value="referral">사내 추천</option></select>
+          <select id="e-type"><option value="jd">공고 오픈</option><option value="teatime">티타임</option></select>
           <button onclick="addEntry()">+ 추가</button>
         </div>
       </div>
@@ -449,7 +449,7 @@ function renderMetrics(){
   const mHired=candidates.filter(c=>{if(c.outcome!=='hired')return false;const dd=c.steps.filter(s=>s.done&&s.doneDate).map(s=>new Date(s.doneDate));if(!dd.length)return false;const last=new Date(Math.max(...dd));return last.getFullYear()===curYear&&last.getMonth()===curMonth;}).length;
   document.getElementById('metrics').innerHTML=`
     <div class="mc blue"><div class="lb">공고 오픈</div><div class="vl">${cntType(mEntries,'jd')}</div><div class="sb">누적 ${allJd}건</div></div>
-    <div class="mc"><div class="lb">사내 추천</div><div class="vl">${cntType(mEntries,'referral')}</div><div class="sb">누적 ${cntType(entries,'referral')}건</div></div>
+    <div class="mc"><div class="lb">티타임</div><div class="vl">${cntType(mEntries,'teatime')}</div><div class="sb">누적 ${cntType(entries,'teatime')}건</div></div>
     <div class="mc purple"><div class="lb">인터뷰 어레인지</div><div class="vl">${mSteps}건</div><div class="sb">이달 진행 단계 수</div></div>
     <div class="mc orange"><div class="lb">누적 후보자</div><div class="vl">${uniqueCands}명</div><div class="sb">중복 제거 기준</div></div>
     <div class="mc green"><div class="lb">채용 전환</div><div class="vl">${mHired}명</div><div class="sb">전환율 ${convRate}%</div></div>`;
@@ -466,7 +466,7 @@ function renderMetrics(){
   if(uniqueCands>0&&allHired>0)sum+=`• 후보자 대비 채용 전환율 ${convRate}%\n`;
   if(allJd>0&&allHired>0)sum+=`• 공고 대비 충원율 ${fillRate}% 달성\n`;
   if(allOnboard>0)sum+=`• ${allOnboard}명 입사 안내 완료\n`;
-  if(cntType(entries,'referral')>0)sum+=`• 사내 추천 파이프라인 ${cntType(entries,'referral')}건 운영\n`;
+  if(cntType(entries,'teatime')>0)sum+=`• 티타임 참관 ${cntType(entries,'teatime')}건\n`;
   if(!sum)sum='아직 데이터가 없어요.\n활동을 기록하면 이력서용 문구가 자동으로 생성됩니다.';
   document.getElementById('sum-box').textContent=sum.trim();
 }
