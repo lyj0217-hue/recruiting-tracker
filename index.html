@@ -487,15 +487,27 @@ function addCandidate(){
   saveCands();document.getElementById('c-name').value='';document.getElementById('c-pos').value='';renderCandidates();renderMetrics();
 }
 
-function toggleStepDone(candId,stepId){
+function toggleStepDone(candId,stepKey){
   const c=candidates.find(c=>c.id===candId);if(!c)return;
-  const s=c.steps.find(s=>s.id===stepId);if(!s)return;
-  if(!s.done){const dateEl=document.getElementById(`sd-${candId}-${stepId}`),modeEl=document.getElementById(`sm-${candId}-${stepId}`);s.done=true;s.doneDate=dateEl&&dateEl.value?new Date(dateEl.value).toISOString():new Date().toISOString();s.mode=modeEl?modeEl.value:null;}
+  const s=c.steps.find(s=>(s.key||s.id)===stepKey);if(!s)return;
+  if(!s.done){const dateEl=document.getElementById(`sd-${candId}-${stepKey}`),modeEl=document.getElementById(`sm-${candId}-${stepKey}`);s.done=true;s.doneDate=dateEl&&dateEl.value?new Date(dateEl.value).toISOString():new Date().toISOString();s.mode=modeEl?modeEl.value:null;}
   else{s.done=false;s.doneDate=null;s.mode=null;}
   saveCands();renderCandidates();renderMetrics();
 }
-function addStep(candId){const c=candidates.find(c=>c.id===candId);if(!c)return;const selEl=document.getElementById(`sa-${candId}`);if(!selEl)return;const stepDef=ALL_STEPS.find(s=>s.id===selEl.value);if(!stepDef||c.steps.find(s=>s.id===stepDef.id))return;c.steps.push({id:stepDef.id,label:stepDef.label,done:false,doneDate:null,mode:null});saveCands();renderCandidates();renderMetrics();}
-function removeStep(candId,stepId){const c=candidates.find(c=>c.id===candId);if(!c)return;c.steps=c.steps.filter(s=>s.id!==stepId);saveCands();renderCandidates();renderMetrics();}
+function addStep(candId){
+  const c=candidates.find(c=>c.id===candId);if(!c)return;
+  const selEl=document.getElementById(`sa-${candId}`);if(!selEl)return;
+  const stepDef=ALL_STEPS.find(s=>s.id===selEl.value);if(!stepDef)return;
+  // 같은 id가 몇 개 있는지 세서 라운드 표시
+  const existing=c.steps.filter(s=>s.id===stepDef.id);
+  let label=stepDef.label;
+  if(existing.length===1) label=stepDef.label+' (추가)';
+  else if(existing.length>1) label=stepDef.label+` (추가 ${existing.length})`;
+  // 고유 key는 id+timestamp로 구분
+  c.steps.push({id:stepDef.id,key:stepDef.id+'_'+Date.now(),label,done:false,doneDate:null,mode:null});
+  saveCands();renderCandidates();renderMetrics();
+}
+function removeStep(candId,stepKey){const c=candidates.find(c=>c.id===candId);if(!c)return;c.steps=c.steps.filter(s=>(s.key||s.id)!==stepKey);saveCands();renderCandidates();renderMetrics();}
 function updateOutcome(candId,outcome){const c=candidates.find(c=>c.id===candId);if(c){c.outcome=outcome;if(outcome!=='hired')c.onboardDone=false;saveCands();renderCandidates();renderMetrics();}}
 function toggleOnboard(candId){const c=candidates.find(c=>c.id===candId);if(c){c.onboardDone=!c.onboardDone;saveCands();renderCandidates();}}
 function delCandidate(id){candidates=candidates.filter(c=>c.id!==id);saveCands();renderCandidates();renderMetrics();}
@@ -514,8 +526,9 @@ function renderCandidates(){
   el.innerHTML=list.map(c=>{
     const existIds=new Set(c.steps.map(s=>s.id)),addableSteps=ALL_STEPS.filter(s=>!existIds.has(s.id));
     const stepsHtml=c.steps.map(s=>{
+      const sk=s.key||s.id;
       const modeBadge=s.done&&s.mode?`<span class="mode-badge ${s.mode==='online'?'mode-online':'mode-offline'}">${s.mode==='online'?'화상':'대면'}</span>`:'';
-      return`<div class="step-row ${s.done?'done-row':''}"><div class="step-check" onclick="toggleStepDone(${c.id},'${s.id}')">${s.done?'✓':''}</div><span class="step-label">${s.label}</span>${s.done?`${modeBadge}<span class="step-date">${fmtDate(s.doneDate)}</span>`:`<select class="step-mode-select" id="sm-${c.id}-${s.id}"><option value="online">화상</option><option value="offline">대면</option></select><input type="date" class="step-date-input" id="sd-${c.id}-${s.id}" value="${now.toISOString().slice(0,10)}" />`}${!s.done?`<button style="height:24px;padding:0 7px;font-size:11px" onclick="removeStep(${c.id},'${s.id}')">✕</button>`:''}</div>`;
+      return`<div class="step-row ${s.done?'done-row':''}"><div class="step-check" onclick="toggleStepDone(${c.id},'${sk}')">${s.done?'✓':''}</div><span class="step-label">${s.label}</span>${s.done?`${modeBadge}<span class="step-date">${fmtDate(s.doneDate)}</span>`:`<select class="step-mode-select" id="sm-${c.id}-${sk}"><option value="online">화상</option><option value="offline">대면</option></select><input type="date" class="step-date-input" id="sd-${c.id}-${sk}" value="${now.toISOString().slice(0,10)}" />`}${!s.done?`<button style="height:24px;padding:0 7px;font-size:11px" onclick="removeStep(${c.id},'${sk}')">✕</button>`:''}</div>`;
     }).join('');
     const addStepHtml=addableSteps.length?`<div class="add-step-row"><select id="sa-${c.id}">${addableSteps.map(s=>`<option value="${s.id}">${s.label}</option>`).join('')}</select><button onclick="addStep(${c.id})">+ 단계 추가</button></div>`:'';
     const onboardHtml=c.outcome==='hired'?`<div class="onboard-row ${c.onboardDone?'done':''}" onclick="toggleOnboard(${c.id})"><div class="onboard-check">${c.onboardDone?'✓':''}</div><span class="onboard-label">입사 안내 완료</span><span style="font-size:11px;margin-left:auto;color:${c.onboardDone?'#085041':'var(--color-text-tertiary)'}">${c.onboardDone?'완료':'미완료'}</span></div>`:'';
