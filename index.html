@@ -169,7 +169,7 @@ button:hover{background:var(--color-background-secondary)}
         <div class="sec-title">공고 / 티타임 기록</div>
         <div class="form-row">
           <input id="e-name" placeholder="공고명 / 후보자명" />
-          <input id="e-pos" placeholder="포지션" />
+          <input id="e-pos" placeholder="포지션/조직" />
           <input type="date" id="e-date" />
           <select id="e-type"><option value="jd">공고 오픈</option><option value="teatime">티타임</option></select>
           <button onclick="addEntry()">+ 추가</button>
@@ -193,7 +193,7 @@ button:hover{background:var(--color-background-secondary)}
       <div class="sec-title">후보자 추가</div>
       <div class="form-row" style="margin-bottom:8px">
         <input id="c-name" placeholder="후보자 이름" />
-        <input id="c-pos" placeholder="포지션 (예: Backend Engineer)" />
+        <input id="c-pos" placeholder="포지션/조직 (예: Backend Engineer)" />
         
         <select id="c-type" onchange="renderStepSelector()">
           <option value="eng">Engineer</option>
@@ -271,7 +271,7 @@ button:hover{background:var(--color-background-secondary)}
       <div class="sec" style="padding:0;overflow:hidden">
         <div class="sheet-table-wrap">
           <table class="sheet-table">
-            <thead><tr><th>유형</th><th>이름</th><th>포지션</th><th>날짜</th></tr></thead>
+            <thead><tr><th>유형</th><th>이름</th><th>포지션</th><th>날짜</th><th></th></tr></thead>
             <tbody id="entry-sheet-body"></tbody>
           </table>
         </div>
@@ -377,6 +377,7 @@ function renderEntrySheet(){
   updateEntryFilters();
   const filterType=document.getElementById('ef-type').value;
   const filterPos=document.getElementById('ef-pos').value;
+  document.getElementById('sheet-head').innerHTML.replace('<thead></thead>','');
   const TYPE_LABEL_E={jd:'공고 오픈',teatime:'티타임'};
   const TYPE_BADGE_E={jd:'b-eng',teatime:'b-non'};
   let list=entries.filter(e=>{
@@ -386,15 +387,19 @@ function renderEntrySheet(){
   }).sort((a,b)=>new Date(b.date)-new Date(a.date));
   const body=document.getElementById('entry-sheet-body');
   if(!list.length){
-    body.innerHTML=`<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--color-text-tertiary);font-size:13px">기록된 데이터가 없어요</td></tr>`;
+    body.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--color-text-tertiary);font-size:13px">기록된 데이터가 없어요</td></tr>`;
     document.getElementById('entry-sheet-summary').innerHTML='';
     return;
   }
-  body.innerHTML=list.map(e=>`<tr>
+  body.innerHTML=list.map(e=>`<tr id="erow-${e.id}">
     <td><span class="badge ${TYPE_BADGE_E[e.type]||'b-inprogress'}">${TYPE_LABEL_E[e.type]||e.type}</span></td>
     <td style="font-weight:500">${e.name}</td>
     <td style="color:var(--color-text-secondary);font-size:12px">${e.pos||'—'}</td>
     <td style="font-size:12px;color:var(--color-text-tertiary)">${new Date(e.date).toLocaleDateString('ko-KR',{year:'numeric',month:'numeric',day:'numeric'})}</td>
+    <td style="display:flex;gap:5px">
+      <button onclick="startEditEntry(${e.id})" style="height:26px;padding:0 10px;font-size:12px">수정</button>
+      <button onclick="delEntry(${e.id})" style="height:26px;padding:0 10px;font-size:12px">삭제</button>
+    </td>
   </tr>`).join('');
   const total=list.length;
   const jdCnt=list.filter(e=>e.type==='jd').length;
@@ -536,6 +541,37 @@ function renderCandidates(){
 }
 
 function addEntry(){const name=document.getElementById('e-name').value.trim();if(!name){document.getElementById('e-name').focus();return;}const dateVal=document.getElementById('e-date').value;entries.push({id:Date.now(),name,pos:document.getElementById('e-pos').value.trim(),type:document.getElementById('e-type').value,date:dateVal?new Date(dateVal).toISOString():new Date().toISOString()});saveEntries();document.getElementById('e-name').value='';document.getElementById('e-pos').value='';renderMetrics();}
+function delEntry(id){entries=entries.filter(e=>e.id!==id);saveEntries();renderMetrics();renderEntrySheet();}
+
+function startEditEntry(id){
+  const e=entries.find(e=>e.id===id);if(!e)return;
+  const row=document.getElementById('erow-'+id);if(!row)return;
+  const dateStr=e.date?new Date(e.date).toISOString().slice(0,10):'';
+  row.innerHTML=`
+    <td><select id="etype-${id}" style="height:28px;font-size:12px;width:auto">
+      <option value="jd"${e.type==='jd'?' selected':''}>공고 오픈</option>
+      <option value="teatime"${e.type==='teatime'?' selected':''}>티타임</option>
+    </select></td>
+    <td><input id="ename-${id}" value="${e.name}" style="height:28px;font-size:12px" /></td>
+    <td><input id="epos-${id}" value="${e.pos||''}" placeholder="포지션/조직" style="height:28px;font-size:12px" /></td>
+    <td><input type="date" id="edate-${id}" value="${dateStr}" style="height:28px;font-size:12px" /></td>
+    <td style="display:flex;gap:5px">
+      <button onclick="saveEditEntry(${id})" style="height:26px;padding:0 10px;font-size:12px">저장</button>
+      <button onclick="renderEntrySheet()" style="height:26px;padding:0 10px;font-size:12px">취소</button>
+    </td>`;
+}
+
+function saveEditEntry(id){
+  const e=entries.find(e=>e.id===id);if(!e)return;
+  const name=document.getElementById('ename-'+id).value.trim();
+  if(!name)return;
+  e.type=document.getElementById('etype-'+id).value;
+  e.name=name;
+  e.pos=document.getElementById('epos-'+id).value.trim();
+  const dateVal=document.getElementById('edate-'+id).value;
+  if(dateVal)e.date=new Date(dateVal).toISOString();
+  saveEntries();renderMetrics();renderEntrySheet();
+}
 function cntType(arr,t){return arr.filter(e=>e.type===t).length;}
 function fmtMonth(y,m){return y+'년 '+MONTHS[m];}
 function changeMonth(d){curMonth+=d;if(curMonth>11){curMonth=0;curYear++;}if(curMonth<0){curMonth=11;curYear--;}renderMetrics();}
