@@ -138,11 +138,20 @@ button:hover{background:var(--color-background-secondary)}
 </head>
 <body>
 <div class="container">
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('metrics')">성과 수치</button>
-    <button class="tab" onclick="switchTab('candidates')">후보자</button>
-    <button class="tab" onclick="switchTab('sheet')">조회</button>
-    <button class="tab" onclick="switchTab('issues')">이슈 메모</button>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;border-bottom:0.5px solid var(--color-border-tertiary)">
+    <div class="tabs" style="margin-bottom:0;border-bottom:none">
+      <button class="tab active" onclick="switchTab('metrics')">성과 수치</button>
+      <button class="tab" onclick="switchTab('candidates')">후보자</button>
+      <button class="tab" onclick="switchTab('sheet')">조회</button>
+      <button class="tab" onclick="switchTab('issues')">이슈 메모</button>
+    </div>
+    <div style="display:flex;gap:6px;padding-bottom:2px">
+      <button onclick="exportData()" style="height:28px;font-size:12px;padding:0 12px">⬇ 데이터 내보내기</button>
+      <label style="height:28px;font-size:12px;padding:0 12px;display:flex;align-items:center;cursor:pointer;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);color:var(--color-text-primary);white-space:nowrap">
+        ⬆ 데이터 가져오기
+        <input type="file" accept=".json" onchange="importData(event)" style="display:none" />
+      </label>
+    </div>
   </div>
 
   <div id="pane-metrics" class="pane active">
@@ -246,6 +255,29 @@ button:hover{background:var(--color-background-secondary)}
       </div>
     </div>
     <div class="sheet-summary" id="sheet-summary"></div>
+
+    <div style="margin-top:1.5rem">
+      <div style="font-size:12px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">공고 / 티타임 기록</div>
+      <div class="sheet-filters" style="margin-bottom:12px">
+        <label>유형</label>
+        <select id="ef-type" onchange="renderEntrySheet()">
+          <option value="">전체</option>
+          <option value="jd">공고 오픈</option>
+          <option value="teatime">티타임</option>
+        </select>
+        <label>포지션</label>
+        <select id="ef-pos" onchange="renderEntrySheet()"><option value="">전체</option></select>
+      </div>
+      <div class="sec" style="padding:0;overflow:hidden">
+        <div class="sheet-table-wrap">
+          <table class="sheet-table">
+            <thead><tr><th>유형</th><th>이름</th><th>포지션</th><th>날짜</th></tr></thead>
+            <tbody id="entry-sheet-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="sheet-summary" id="entry-sheet-summary"></div>
+    </div>
   </div>
 
   <div id="pane-issues" class="pane">
@@ -312,7 +344,7 @@ function switchTab(t){
     document.querySelectorAll('.tab')[i].classList.toggle('active',id===t);
   });
   if(t==='metrics')renderMetrics();
-  if(t==='sheet'){updateSheetFilters();renderSheet();}
+  if(t==='sheet'){updateSheetFilters();renderSheet();renderEntrySheet();}
 }
 
 function updateSheetFilters(){
@@ -330,6 +362,47 @@ function updateSheetFilters(){
   const curStep=stepEl.value;
   const usedSteps=ALL_STEPS.filter(s=>stepIds.has(s.id));
   stepEl.innerHTML='<option value="">전체</option>'+usedSteps.map(s=>`<option value="${s.id}"${s.id===curStep?' selected':''}>${s.label}</option>`).join('');
+}
+
+function updateEntryFilters(){
+  const filterType=document.getElementById('ef-type').value;
+  const filtered=filterType?entries.filter(e=>e.type===filterType):entries;
+  const positions=[...new Set(filtered.map(e=>e.pos).filter(Boolean))].sort();
+  const posEl=document.getElementById('ef-pos');
+  const cur=posEl.value;
+  posEl.innerHTML='<option value="">전체</option>'+positions.map(p=>`<option value="${p}"${p===cur?' selected':''}>${p}</option>`).join('');
+}
+
+function renderEntrySheet(){
+  updateEntryFilters();
+  const filterType=document.getElementById('ef-type').value;
+  const filterPos=document.getElementById('ef-pos').value;
+  const TYPE_LABEL_E={jd:'공고 오픈',teatime:'티타임'};
+  const TYPE_BADGE_E={jd:'b-eng',teatime:'b-non'};
+  let list=entries.filter(e=>{
+    if(filterType&&e.type!==filterType)return false;
+    if(filterPos&&e.pos!==filterPos)return false;
+    return true;
+  }).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const body=document.getElementById('entry-sheet-body');
+  if(!list.length){
+    body.innerHTML=`<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--color-text-tertiary);font-size:13px">기록된 데이터가 없어요</td></tr>`;
+    document.getElementById('entry-sheet-summary').innerHTML='';
+    return;
+  }
+  body.innerHTML=list.map(e=>`<tr>
+    <td><span class="badge ${TYPE_BADGE_E[e.type]||'b-inprogress'}">${TYPE_LABEL_E[e.type]||e.type}</span></td>
+    <td style="font-weight:500">${e.name}</td>
+    <td style="color:var(--color-text-secondary);font-size:12px">${e.pos||'—'}</td>
+    <td style="font-size:12px;color:var(--color-text-tertiary)">${new Date(e.date).toLocaleDateString('ko-KR',{year:'numeric',month:'numeric',day:'numeric'})}</td>
+  </tr>`).join('');
+  const total=list.length;
+  const jdCnt=list.filter(e=>e.type==='jd').length;
+  const ttCnt=list.filter(e=>e.type==='teatime').length;
+  document.getElementById('entry-sheet-summary').innerHTML=`
+    <span class="sheet-stat">총 ${total}건</span>
+    <span class="sheet-stat">공고 오픈 ${jdCnt}건</span>
+    <span class="sheet-stat">티타임 ${ttCnt}건</span>`;
 }
 
 function renderSheet(){
@@ -367,6 +440,35 @@ function renderSheet(){
   }).join('');
   const total=list.length,hired=list.filter(c=>c.outcome==='hired').length,inprog=list.filter(c=>c.outcome==='in-progress').length,rejected=list.filter(c=>c.outcome==='rejected').length;
   document.getElementById('sheet-summary').innerHTML=`<span class="sheet-stat">총 ${total}명</span><span class="sheet-stat">진행중 ${inprog}명</span><span class="sheet-stat">채용됨 ${hired}명</span><span class="sheet-stat">불합격 ${rejected}명</span><span class="sheet-stat">전환율 ${total>0?Math.round(hired/total*100):0}%</span>`;
+}
+
+function exportData(){
+  const data={candidates,entries,issues};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='recruiting-tracker-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(data.candidates)candidates=data.candidates;
+      if(data.entries)entries=data.entries;
+      if(data.issues)issues=data.issues;
+      saveCands();saveEntries();saveIssues();
+      renderCandidates();renderMetrics();renderIssues();
+      alert('데이터를 불러왔어요!');
+    }catch(err){alert('파일을 읽는 중 오류가 발생했어요. JSON 파일인지 확인해주세요.');}
+  };
+  reader.readAsText(file);
+  e.target.value='';
 }
 
 function renderStepSelector(){
