@@ -524,7 +524,7 @@ function renderCandidates(){
   const el=document.getElementById('cand-list');
   if(!list.length){el.innerHTML='<div class="empty" style="grid-column:1/-1">등록된 후보자가 없어요</div>';return;}
   el.innerHTML=list.map(c=>{
-    const addStepHtml=`<div class="add-step-row"><select id="sa-${c.id}">${ALL_STEPS.map(s=>`<option value="${s.id}">${s.label}</option>`).join('')}</select><button onclick="addStep(${c.id})">+ 단계 추가</button></div>`;    const stepsHtml=c.steps.map(s=>{
+    const stepsHtml=c.steps.map(s=>{
       const sk=s.key||s.id;
       const modeBadge=s.done&&s.mode?`<span class="mode-badge ${s.mode==='online'?'mode-online':'mode-offline'}">${s.mode==='online'?'화상':'대면'}</span>`:'';
       return`<div class="step-row ${s.done?'done-row':''}"><div class="step-check" onclick="toggleStepDone(${c.id},'${sk}')">${s.done?'✓':''}</div><span class="step-label">${s.label}</span>${s.done?`${modeBadge}<span class="step-date">${fmtDate(s.doneDate)}</span>`:`<select class="step-mode-select" id="sm-${c.id}-${sk}"><option value="online">화상</option><option value="offline">대면</option></select><input type="date" class="step-date-input" id="sd-${c.id}-${sk}" value="${now.toISOString().slice(0,10)}" />`}${!s.done?`<button style="height:24px;padding:0 7px;font-size:11px" onclick="removeStep(${c.id},'${sk}')">✕</button>`:''}</div>`;
